@@ -15,7 +15,6 @@
       box-sizing: border-box;
       font-family: 'Segoe UI', Roboto, sans-serif;
     }
-
     :root {
       --primary: #2563eb;
       --primary-light: #3b82f6;
@@ -36,7 +35,6 @@
       --radius-md: 16px;
       --radius-lg: 24px;
     }
-
     body.dark-mode {
       --primary: #60a5fa;
       --primary-light: #93c5fd;
@@ -49,13 +47,11 @@
       --text-soft: #94a3b8;
       --border: #334155;
     }
-
     html, body {
       width: 100%;
       overflow-x: hidden;
       scroll-behavior: smooth;
     }
-
     body {
       background: var(--bg-gradient);
       background-attachment: fixed;
@@ -63,7 +59,91 @@
       min-height: 100vh;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-
+    /* ===== AUTH PAGES ===== */
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .auth-box {
+      background: var(--card);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 440px;
+      animation: fadeUp 0.5s ease;
+    }
+    .auth-box.registration {
+      max-width: 500px;
+    }
+    .auth-box h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+    }
+    .auth-box p.desc {
+      text-align: center;
+      color: var(--text-soft);
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+    .auth-box input, .auth-box select {
+      width: 100%;
+      padding: 0.95rem;
+      margin: 0.4rem 0;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    .auth-box input:focus, .auth-box select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-soft);
+    }
+    .auth-btn {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: all 0.3s ease;
+    }
+    .auth-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .toggle-auth {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.95rem;
+      color: var(--text-soft);
+    }
+    .toggle-auth span {
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .toggle-auth span:hover { text-decoration: underline; }
+    .form-label {
+      font-size: 0.85rem;
+      color: var(--text-soft);
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+    .hidden { display: none !important; }
+    /* ===== ORIGINAL STYLES ===== */
     .menu-toggle {
       position: fixed;
       top: 1rem;
@@ -80,7 +160,6 @@
       transition: all 0.3s ease;
     }
     .menu-toggle:hover { transform: scale(1.08); }
-
     .overlay {
       position: fixed;
       inset: 0;
@@ -92,7 +171,6 @@
       z-index: 150;
     }
     .overlay.show { opacity: 1; visibility: visible; }
-
     .sidebar {
       position: fixed;
       top: 0;
@@ -110,7 +188,6 @@
     }
     body.dark-mode .sidebar { background: rgba(30, 41, 59, 0.85); }
     .sidebar.open { transform: translateX(0); }
-
     .sidebar-header {
       display: flex;
       justify-content: space-between;
@@ -123,7 +200,8 @@
       font-size: 1.25rem;
       background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
       -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;
       font-weight: 700;
     }
     .close-btn {
@@ -137,7 +215,6 @@
       transition: all 0.25s ease;
     }
     .close-btn:hover { background: var(--danger); color: white; transform: rotate(90deg); }
-
     .nav-links { list-style: none; }
     .nav-links li {
       padding: 1rem 1.25rem;
@@ -152,7 +229,6 @@
       color: var(--primary);
       transform: translateX(4px);
     }
-
     .dark-toggle {
       margin-top: 2rem;
       padding-top: 1.5rem;
@@ -168,7 +244,11 @@
       cursor: pointer;
       font-weight: 600;
     }
-
+    .logout-btn {
+      margin-top: 1rem;
+      background: rgba(239, 68, 68, 0.1) !important;
+      color: var(--danger) !important;
+    }
     .content {
       padding: 1.25rem;
       padding-top: 5rem;
@@ -176,7 +256,6 @@
       margin: 0 auto;
       width: 100%;
     }
-
     .section {
       display: none;
       animation: fadeUp 0.5s ease;
@@ -186,17 +265,16 @@
       from { opacity: 0; transform: translateY(20px); }
       to { opacity: 1; transform: translateY(0); }
     }
-
     h1 {
       margin-bottom: 2rem;
       font-size: 1.75rem;
       text-align: center;
       background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
       -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;
       font-weight: 700;
     }
-
     .add-btn-container {
       text-align: center;
       margin-bottom: 2rem;
@@ -214,7 +292,6 @@
       transition: all 0.3s ease;
     }
     .add-toggle-btn:hover { transform: translateY(-3px); }
-
     .form-box {
       background: var(--card);
       padding: 1.75rem;
@@ -227,7 +304,6 @@
       transition: all 0.4s ease;
     }
     .form-box.show { max-height: 600px; opacity: 1; }
-
     .form-box input, .form-box textarea, .form-box select {
       width: 100%;
       padding: 0.95rem;
@@ -251,7 +327,6 @@
     }
     .save-btn { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; }
     .cancel-btn { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
-
     .list-container {
       background: var(--card);
       padding: 1.5rem;
@@ -289,7 +364,6 @@
       padding: 2.5rem 1rem;
       font-style: italic;
     }
-
     .offline-status {
       position: fixed;
       bottom: 1rem; right: 1rem;
@@ -301,101 +375,295 @@
       transition: all 0.3s ease; pointer-events: none;
     }
     .offline-status.show { opacity: 1; transform: translateY(0); }
+    .user-info {
+      padding: 0.75rem;
+      background: var(--primary-soft);
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
-
-  <div class="offline-status" id="offlineStatus">✅ Ready Offline</div>
-  <div class="overlay" id="overlay"></div>
-  <button class="menu-toggle" id="menuBtn">☰</button>
-
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <h2>✨ StudyMate PH</h2>
-      <button class="close-btn" id="closeBtn">×</button>
+  <!-- ===== LOGIN FORM ===== -->
+  <div class="auth-container" id="loginPage">
+    <div class="auth-box">
+      <h2>🔐 Log In — StudyMate PH</h2>
+      <p class="desc">Enter your details to access your account</p>
+      <input type="text" id="loginUser" placeholder="Enter your email or username" required>
+      <input type="password" id="loginPass" placeholder="Enter your password" required>
+      <button class="auth-btn" id="loginBtn">✅ Log In</button>
+      <div class="toggle-auth">
+        Don't have an account? <span id="goToRegister">Register here</span>
+      </div>
     </div>
-    <ul class="nav-links">
-      <li data-target="schedule" class="active">📅 Class Schedule</li>
-      <li data-target="assignments">📝 Assignments</li>
-      <li data-target="projects">📊 Project Tracker</li>
-    </ul>
-    <div class="dark-toggle">
-      <button id="darkModeBtn">🌙 Dark Mode</button>
+  </div>
+  <!-- ===== REGISTER FORM ===== -->
+  <div class="auth-container hidden" id="registerPage">
+    <div class="auth-box registration">
+      <h2>Create Account — StudyMate PH</h2>
+      <p class="desc">Fill in all information to get started</p>
+      
+      <label class="form-label">Full Name:</label>
+      <input type="text" id="regFullname" placeholder="Enter your full name" required>
+      
+      <label class="form-label">Birthday</label>
+      <input type="date" id="regBirthday" required>
+      
+      <label class="form-label">Age:</label>
+      <input type="text" id="regAge" placeholder="Will be calculated automatically" readonly>
+      
+      <label class="form-label">Email</label>
+      <input type="text" id="regEmail" placeholder="Enter your email or username" required>
+      
+      <label class="form-label">Password</label>
+      <input type="password" id="regPass" placeholder="Create a strong password" required>
+      
+      <label class="form-label">Confirm Password:</label>
+      <input type="password" id="regConfirmPass" placeholder="Re-enter your password" required>
+      
+      <label class="form-label">Contact Number:</label>
+      <input type="tel" id="regContact" placeholder="Enter your contact number" required>
+      
+      <label class="form-label">Complete Address:</label>
+      <input type="text" id="regAddress" placeholder="Enter your complete address" required>
+      
+      <label class="form-label">Security Question:</label>
+      <select id="regSecurityQ" required>
+        <option value="">-- Select a Security Question --</option>
+        <option>What was your childhood nickname?</option>
+        <option>What is the name of your favorite teacher?</option>
+        <option>Where were you born?</option>
+        <option>What is the name of your first pet?</option>
+        <option>What was your favorite color as a child?</option>
+      </select>
+      
+      <label class="form-label">Security Answer:</label>
+      <input type="text" id="regSecurityA" placeholder="Enter your security answer" required>
+      
+      <button class="auth-btn" id="registerBtn">✅ Create Account</button>
+      <div class="toggle-auth">
+        Already have an account? <span id="goToLogin">Log in here</span>
+      </div>
     </div>
-  </nav>
-
-  <main class="content">
-    <section id="schedule" class="section active">
-      <h1>📅 Class Schedule</h1>
-      <div class="add-btn-container">
-        <button class="add-toggle-btn" id="showSchedFormBtn">➕ Add New Schedule</button>
+  </div>
+  <!-- ===== MAIN APPLICATION (Hidden until logged in) ===== -->
+  <div id="mainApp" class="hidden">
+    <div class="offline-status" id="offlineStatus">✅ Ready Offline</div>
+    <div class="overlay" id="overlay"></div>
+    <button class="menu-toggle" id="menuBtn">☰</button>
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>✨ StudyMate PH</h2>
+        <button class="close-btn" id="closeBtn">×</button>
       </div>
-      <div class="form-box" id="schedFormBox">
-        <h3>📅 New Schedule</h3>
-        <input type="text" id="schedSubject" placeholder="Subject Name" required>
-        <select id="schedDay">
-          <option value="">-- Select Day --</option>
-          <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
-          <option>Thursday</option><option>Friday</option><option>Saturday</option>
-        </select>
-        <input type="time" id="schedStart" required>
-        <input type="time" id="schedEnd" required>
-        <div class="btn-group">
-          <button class="save-btn" id="addSchedBtn">✅ Save</button>
-          <button class="cancel-btn" id="hideSchedFormBtn">✕ Cancel</button>
+      <div class="user-info" id="userInfoDisplay"></div>
+      <ul class="nav-links">
+        <li data-target="schedule" class="active">📅 Class Schedule</li>
+        <li data-target="assignments">📝 Assignments</li>
+        <li data-target="projects">📊 Project Tracker</li>
+      </ul>
+      <div class="dark-toggle">
+        <button id="darkModeBtn">🌙 Dark Mode</button>
+        <button class="logout-btn" id="logoutBtn">🚪 Log Out</button>
+      </div>
+    </nav>
+    <main class="content">
+      <section id="schedule" class="section active">
+        <h1>📅 Class Schedule</h1>
+        <div class="add-btn-container">
+          <button class="add-toggle-btn" id="showSchedFormBtn">➕ Add New Schedule</button>
         </div>
-      </div>
-      <div class="list-container">
-        <h3>📋 My Schedule</h3>
-        <ul id="scheduleList"></ul>
-      </div>
-    </section>
-
-    <section id="assignments" class="section">
-      <h1>📝 Assignments & Deadlines</h1>
-      <div class="add-btn-container">
-        <button class="add-toggle-btn" id="showAssignFormBtn">➕ Add New Assignment</button>
-      </div>
-      <div class="form-box" id="assignFormBox">
-        <h3>📝 New Assignment</h3>
-        <input type="text" id="assignTitle" placeholder="Assignment Title" required>
-        <textarea id="assignDesc" placeholder="Description (optional)"></textarea>
-        <input type="date" id="assignDue" required>
-        <div class="btn-group">
-          <button class="save-btn" id="addAssignBtn">✅ Save</button>
-          <button class="cancel-btn" id="hideAssignFormBtn">✕ Cancel</button>
+        <div class="form-box" id="schedFormBox">
+          <h3>📅 New Schedule</h3>
+          <input type="text" id="schedSubject" placeholder="Enter subject name" required>
+          <select id="schedDay">
+            <option value="">-- Select Day --</option>
+            <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+            <option>Thursday</option><option>Friday</option><option>Saturday</option>
+          </select>
+          <input type="time" id="schedStart" required>
+          <input type="time" id="schedEnd" required>
+          <div class="btn-group">
+            <button class="save-btn" id="addSchedBtn">✅ Save</button>
+            <button class="cancel-btn" id="hideSchedFormBtn">✕ Cancel</button>
+          </div>
         </div>
-      </div>
-      <div class="list-container">
-        <h3>📋 My Assignments</h3>
-        <ul id="assignList"></ul>
-      </div>
-    </section>
-
-    <section id="projects" class="section">
-      <h1>📊 Group Project Tracker</h1>
-      <div class="add-btn-container">
-        <button class="add-toggle-btn" id="showProjFormBtn">➕ Add New Project</button>
-      </div>
-      <div class="form-box" id="projFormBox">
-        <h3>📊 New Project</h3>
-        <input type="text" id="projName" placeholder="Project Name" required>
-        <input type="text" id="projMembers" placeholder="Members (comma separated)">
-        <input type="date" id="projDeadline" required>
-        <div class="btn-group">
-          <button class="save-btn" id="addProjBtn">✅ Save</button>
-          <button class="cancel-btn" id="hideProjFormBtn">✕ Cancel</button>
+        <div class="list-container">
+          <h3>📋 My Schedule</h3>
+          <ul id="scheduleList"></ul>
         </div>
-      </div>
-      <div class="list-container">
-        <h3>📋 My Projects</h3>
-        <ul id="projList"></ul>
-      </div>
-    </section>
-  </main>
-
+      </section>
+      <section id="assignments" class="section">
+        <h1>📝 Assignments & Deadlines</h1>
+        <div class="add-btn-container">
+          <button class="add-toggle-btn" id="showAssignFormBtn">➕ Add New Assignment</button>
+        </div>
+        <div class="form-box" id="assignFormBox">
+          <h3>📝 New Assignment</h3>
+          <input type="text" id="assignTitle" placeholder="Enter assignment title" required>
+          <textarea id="assignDesc" placeholder="Enter description (optional)"></textarea>
+          <input type="date" id="assignDue" required>
+          <div class="btn-group">
+            <button class="save-btn" id="addAssignBtn">✅ Save</button>
+            <button class="cancel-btn" id="hideAssignFormBtn">✕ Cancel</button>
+          </div>
+        </div>
+        <div class="list-container">
+          <h3>📋 My Assignments</h3>
+          <ul id="assignList"></ul>
+        </div>
+      </section>
+      <section id="projects" class="section">
+        <h1>📊 Group Project Tracker</h1>
+        <div class="add-btn-container">
+          <button class="add-toggle-btn" id="showProjFormBtn">➕ Add New Project</button>
+        </div>
+        <div class="form-box" id="projFormBox">
+          <h3>📊 New Project</h3>
+          <input type="text" id="projName" placeholder="Enter project name" required>
+          <input type="text" id="projMembers" placeholder="Enter member names, separated by commas">
+          <input type="date" id="projDeadline" required>
+          <div class="btn-group">
+            <button class="save-btn" id="addProjBtn">✅ Save</button>
+            <button class="cancel-btn" id="hideProjFormBtn">✕ Cancel</button>
+          </div>
+        </div>
+        <div class="list-container">
+          <h3>📋 My Projects</h3>
+          <ul id="projList"></ul>
+        </div>
+      </section>
+    </main>
+  </div>
   <script>
-    // ===== SERVICE WORKER REGISTRATION — ITO ANG NAGPAGANA NG OFFLINE =====
+    // ===== PAGE NAVIGATION =====
+    function showPage(pageId) {
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('registerPage').classList.add('hidden');
+      document.getElementById('mainApp').classList.add('hidden');
+      document.getElementById(pageId).classList.remove('hidden');
+    }
+    // ===== CALCULATE AGE FROM BIRTHDAY =====
+    document.getElementById('regBirthday').addEventListener('change', function() {
+      const bday = new Date(this.value);
+      if (isNaN(bday.getTime())) return;
+      const today = new Date();
+      let age = today.getFullYear() - bday.getFullYear();
+      const monthDiff = today.getMonth() - bday.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < bday.getDate())) {
+        age--;
+      }
+      document.getElementById('regAge').value = age + ' years old';
+    });
+    // ===== SWITCH BETWEEN LOGIN AND REGISTER =====
+    document.getElementById('goToRegister').addEventListener('click', () => {
+      showPage('registerPage');
+    });
+    document.getElementById('goToLogin').addEventListener('click', () => {
+      showPage('loginPage');
+    });
+    // ===== REGISTER HANDLER =====
+    document.getElementById('registerBtn').addEventListener('click', () => {
+      const fullname = document.getElementById('regFullname').value.trim();
+      const birthday = document.getElementById('regBirthday').value;
+      const email = document.getElementById('regEmail').value.trim();
+      const pass = document.getElementById('regPass').value;
+      const confirmPass = document.getElementById('regConfirmPass').value;
+      const contact = document.getElementById('regContact').value.trim();
+      const address = document.getElementById('regAddress').value.trim();
+      const secQ = document.getElementById('regSecurityQ').value;
+      const secA = document.getElementById('regSecurityA').value.trim();
+      // Validation
+      if (!fullname || !birthday || !email || !pass || !confirmPass || !contact || !address || !secQ || !secA) {
+        return alert('Please fill in ALL required fields!');
+      }
+      if (pass !== confirmPass) {
+        return alert('Passwords do not match! Please re-enter the same password.');
+      }
+      if (pass.length < 6) {
+        return alert('Password must be at least 6 characters long!');
+      }
+      // Get existing users
+      const users = JSON.parse(localStorage.getItem('studyMateUsers') || '[]');
+      
+      // Check if email/username already exists
+      const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (exists) {
+        return alert('An account with this email/username already exists!');
+      }
+      // Save new account
+      const newUser = {
+        fullname,
+        birthday,
+        email: email.toLowerCase(),
+        password: pass,
+        contact,
+        address,
+        securityQ: secQ,
+        securityA: secA.toLowerCase()
+      };
+      users.push(newUser);
+      localStorage.setItem('studyMateUsers', JSON.stringify(users));
+      
+      alert('✅ Account created successfully! You may now log in.');
+      
+      // Clear form
+      ['regFullname','regBirthday','regAge','regEmail','regPass','regConfirmPass','regContact','regAddress','regSecurityQ','regSecurityA']
+        .forEach(id => document.getElementById(id).value = '');
+      
+      showPage('loginPage');
+    });
+    // ===== LOGIN HANDLER =====
+    document.getElementById('loginBtn').addEventListener('click', () => {
+      const email = document.getElementById('loginUser').value.trim().toLowerCase();
+      const pass = document.getElementById('loginPass').value;
+      if (!email || !pass) {
+        return alert('Please enter your login details!');
+      }
+      const users = JSON.parse(localStorage.getItem('studyMateUsers') || '[]');
+      const user = users.find(u => u.email === email && u.password === pass);
+      if (!user) {
+        return alert('❌ Incorrect email/username or password!');
+      }
+      // Save current session
+      localStorage.setItem('currentUser', JSON.stringify({
+        fullname: user.fullname,
+        email: user.email
+      }));
+      // Show app and user info
+      document.getElementById('userInfoDisplay').innerHTML = `
+        <strong>${user.fullname}</strong><br>
+        <small>${user.email}</small>
+      `;
+      
+      showPage('mainApp');
+      renderAll();
+    });
+    // ===== LOGOUT HANDLER =====
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('currentUser');
+      showPage('loginPage');
+      // Clear login form
+      document.getElementById('loginUser').value = '';
+      document.getElementById('loginPass').value = '';
+    });
+    // ===== CHECK EXISTING SESSION =====
+    function checkSession() {
+      const currentUser = localStorage.getItem('currentUser');
+      if (currentUser) {
+        const user = JSON.parse(currentUser);
+        document.getElementById('userInfoDisplay').innerHTML = `
+          <strong>${user.fullname}</strong><br>
+          <small>${user.email}</small>
+        `;
+        showPage('mainApp');
+        renderAll();
+      } else {
+        showPage('loginPage');
+      }
+    }
+    // ===== ORIGINAL APP CODE — UNCHANGED =====
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {
         try {
@@ -409,8 +677,6 @@
         }
       });
     }
-
-    // ===== DATA STORAGE =====
     function getData(key) {
       try { return JSON.parse(localStorage.getItem(key)) || []; }
       catch { return []; }
@@ -419,8 +685,6 @@
       localStorage.setItem(key, JSON.stringify(data));
       renderAll();
     }
-
-    // ===== SIDEBAR =====
     const menuBtn = document.getElementById('menuBtn');
     const closeBtn = document.getElementById('closeBtn');
     const sidebar = document.getElementById('sidebar');
@@ -430,8 +694,6 @@
     menuBtn.addEventListener('click', openSidebar);
     closeBtn.addEventListener('click', closeSidebar);
     overlay.addEventListener('click', closeSidebar);
-
-    // ===== NAVIGATION =====
     document.querySelectorAll('.nav-links li').forEach(link => {
       link.addEventListener('click', () => {
         const targetId = link.dataset.target;
@@ -442,8 +704,6 @@
         closeSidebar();
       });
     });
-
-    // ===== DARK MODE =====
     const darkModeBtn = document.getElementById('darkModeBtn');
     if (localStorage.getItem('darkMode') === 'true') {
       document.body.classList.add('dark-mode');
@@ -455,8 +715,6 @@
       this.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
       localStorage.setItem('darkMode', isDark);
     });
-
-    // ===== SCHEDULE =====
     const schedForm = document.getElementById('schedFormBox');
     document.getElementById('showSchedFormBtn').onclick = () => schedForm.classList.add('show');
     document.getElementById('hideSchedFormBtn').onclick = () => {
@@ -468,7 +726,7 @@
       const day = document.getElementById('schedDay').value;
       const start = document.getElementById('schedStart').value;
       const end = document.getElementById('schedEnd').value;
-      if (!subject || !day || !start || !end) return alert('Punan ang lahat!');
+      if (!subject || !day || !start || !end) return alert('Please fill in all fields!');
       const data = getData('schedule');
       data.push({ subject, day, start, end });
       saveData('schedule', data);
@@ -482,12 +740,10 @@
         ? '<li class="empty-msg">📅 No schedule added yet.</li>'
         : data.map((item, i) => `
           <li style="animation-delay: ${i * 60}ms">
-            <div><strong>${item.subject}</strong>${item.day} — ${item.start} to ${item.end}</div>
+            <div><strong>${item.subject}</strong><br>${item.day} — ${item.start} to ${item.end}</div>
             <button class="delete-btn" data-key="schedule" data-idx="${i}">Delete</button>
           </li>`).join('');
     }
-
-    // ===== ASSIGNMENTS =====
     const assignForm = document.getElementById('assignFormBox');
     document.getElementById('showAssignFormBtn').onclick = () => assignForm.classList.add('show');
     document.getElementById('hideAssignFormBtn').onclick = () => {
@@ -498,7 +754,7 @@
       const title = document.getElementById('assignTitle').value.trim();
       const desc = document.getElementById('assignDesc').value.trim();
       const due = document.getElementById('assignDue').value;
-      if (!title || !due) return alert('Punan ang Title at Due Date!');
+      if (!title || !due) return alert('Please fill in Title and Due Date!');
       const data = getData('assignments');
       data.push({ title, desc, due });
       saveData('assignments', data);
@@ -516,8 +772,6 @@
             <button class="delete-btn" data-key="assignments" data-idx="${i}">Delete</button>
           </li>`).join('');
     }
-
-    // ===== PROJECTS =====
     const projForm = document.getElementById('projFormBox');
     document.getElementById('showProjFormBtn').onclick = () => projForm.classList.add('show');
     document.getElementById('hideProjFormBtn').onclick = () => {
@@ -528,7 +782,7 @@
       const name = document.getElementById('projName').value.trim();
       const members = document.getElementById('projMembers').value.trim();
       const deadline = document.getElementById('projDeadline').value;
-      if (!name || !deadline) return alert('Punan ang Project Name at Deadline!');
+      if (!name || !deadline) return alert('Please fill in Project Name and Deadline!');
       const data = getData('projects');
       data.push({ name, members, deadline });
       saveData('projects', data);
@@ -546,8 +800,6 @@
             <button class="delete-btn" data-key="projects" data-idx="${i}">Delete</button>
           </li>`).join('');
     }
-
-    // ===== DELETE =====
     document.addEventListener('click', e => {
       if (e.target.classList.contains('delete-btn')) {
         const key = e.target.dataset.key;
@@ -557,14 +809,13 @@
         saveData(key, data);
       }
     });
-
-    // ===== INITIAL LOAD =====
     function renderAll() {
       renderSchedule();
       renderAssignments();
       renderProjects();
     }
-    renderAll();
+    // ===== START — CHECK SESSION ON LOAD =====
+    checkSession();
   </script>
 </body>
 </html>
