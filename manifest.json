@@ -1,7 +1,7 @@
 {
   "name": "StudyMate PH",
   "short_name": "StudyMate",
-  "description": "Schedule, Assignments & Project Tracker — Works Offline!",
+  "description": "Your Academic Companion — Offline Ready",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -10,14 +10,16 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
