@@ -6,7 +6,6 @@
   <meta name="theme-color" content="#2563eb">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="description" content="StudyMate PH — Your personal academic companion">
   <link rel="manifest" href="manifest.json">
   <title>StudyMate PH ✨</title>
   <style>
@@ -14,7 +13,7 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Segoe UI', 'Poppins', Roboto, sans-serif;
+      font-family: 'Segoe UI', Roboto, sans-serif;
     }
 
     :root {
@@ -49,9 +48,6 @@
       --text: #f1f5f9;
       --text-soft: #94a3b8;
       --border: #334155;
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
-      --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.45);
     }
 
     html, body {
@@ -68,7 +64,6 @@
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* ===== MENU BUTTON — Floating ===== */
     .menu-toggle {
       position: fixed;
       top: 1rem;
@@ -82,33 +77,22 @@
       cursor: pointer;
       z-index: 100;
       box-shadow: var(--shadow-md);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.3s ease;
     }
-    .menu-toggle:hover {
-      transform: scale(1.08);
-      box-shadow: var(--shadow-lg);
-    }
-    .menu-toggle:active {
-      transform: scale(0.95);
-    }
+    .menu-toggle:hover { transform: scale(1.08); }
 
-    /* ===== OVERLAY ===== */
     .overlay {
       position: fixed;
       inset: 0;
       background: rgba(15, 23, 42, 0.5);
       backdrop-filter: blur(6px);
-      z-index: 150;
       opacity: 0;
       visibility: hidden;
       transition: all 0.3s ease;
+      z-index: 150;
     }
-    .overlay.show {
-      opacity: 1;
-      visibility: visible;
-    }
+    .overlay.show { opacity: 1; visibility: visible; }
 
-    /* ===== SIDEBAR — Glass Morphism + Animation ===== */
     .sidebar {
       position: fixed;
       top: 0;
@@ -118,28 +102,21 @@
       max-width: 88vw;
       background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-right: 1px solid rgba(37, 99, 235, 0.1);
       transform: translateX(-105%);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 200;
       padding: 1.5rem;
       overflow-y: auto;
     }
-    body.dark-mode .sidebar {
-      background: rgba(30, 41, 59, 0.85);
-      border-right: 1px solid rgba(96, 165, 250, 0.15);
-    }
-    .sidebar.open {
-      transform: translateX(0);
-    }
+    body.dark-mode .sidebar { background: rgba(30, 41, 59, 0.85); }
+    .sidebar.open { transform: translateX(0); }
 
     .sidebar-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
-      padding: 0.5rem 0 1rem;
+      padding-bottom: 1rem;
       border-bottom: 1px solid var(--border);
     }
     .sidebar-header h2 {
@@ -147,62 +124,33 @@
       background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      background-clip: text;
       font-weight: 700;
     }
     .close-btn {
-      background: var(--primary-soft);
-      border: none;
-      font-size: 1.3rem;
-      width: 36px;
-      height: 36px;
+      width: 36px; height: 36px;
       border-radius: 50%;
-      cursor: pointer;
+      border: none;
+      background: var(--primary-soft);
       color: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      font-size: 1.3rem;
+      cursor: pointer;
       transition: all 0.25s ease;
     }
-    .close-btn:hover {
-      background: var(--danger);
-      color: white;
-      transform: rotate(90deg);
-    }
+    .close-btn:hover { background: var(--danger); color: white; transform: rotate(90deg); }
 
-    .nav-links {
-      list-style: none;
-    }
+    .nav-links { list-style: none; }
     .nav-links li {
       padding: 1rem 1.25rem;
       margin: 0.35rem 0;
       border-radius: var(--radius-md);
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      font-size: 0.98rem;
+      transition: all 0.3s ease;
       font-weight: 500;
-      position: relative;
-      overflow: hidden;
-    }
-    .nav-links li::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      height: 100%;
-      width: 3px;
-      background: linear-gradient(180deg, var(--primary), var(--accent));
-      transform: scaleY(0);
-      transition: transform 0.3s ease;
     }
     .nav-links li:hover, .nav-links li.active {
       background: var(--primary-soft);
       color: var(--primary);
       transform: translateX(4px);
-    }
-    .nav-links li.active::before,
-    .nav-links li:hover::before {
-      transform: scaleY(1);
     }
 
     .dark-toggle {
@@ -218,16 +166,9 @@
       border: none;
       border-radius: var(--radius-md);
       cursor: pointer;
-      font-size: 0.95rem;
       font-weight: 600;
-      transition: all 0.3s ease;
-    }
-    .dark-toggle button:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
     }
 
-    /* ===== MAIN CONTENT ===== */
     .content {
       padding: 1.25rem;
       padding-top: 5rem;
@@ -238,20 +179,12 @@
 
     .section {
       display: none;
-      animation: fadeSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: fadeUp 0.5s ease;
     }
-    .section.active {
-      display: block;
-    }
-    @keyframes fadeSlideUp {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .section.active { display: block; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     h1 {
@@ -261,18 +194,9 @@
       background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      background-clip: text;
       font-weight: 700;
     }
 
-    h3 {
-      font-size: 1.05rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--text);
-    }
-
-    /* ===== ADD BUTTON — Aesthetic ===== */
     .add-btn-container {
       text-align: center;
       margin-bottom: 2rem;
@@ -287,107 +211,54 @@
       font-weight: 600;
       cursor: pointer;
       box-shadow: var(--shadow-md);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.3s ease;
     }
-    .add-toggle-btn:hover {
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: var(--shadow-lg);
-    }
-    .add-toggle-btn:active {
-      transform: translateY(0) scale(0.98);
-    }
+    .add-toggle-btn:hover { transform: translateY(-3px); }
 
-    /* ===== FORM BOX — Smooth Expand Animation ===== */
     .form-box {
       background: var(--card);
       padding: 1.75rem;
       border-radius: var(--radius-lg);
       margin-bottom: 2rem;
       box-shadow: var(--shadow-md);
-      width: 100%;
       max-height: 0;
       opacity: 0;
       overflow: hidden;
-      transform: translateY(-10px);
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.4s ease;
     }
-    .form-box.show {
-      max-height: 600px;
-      opacity: 1;
-      transform: translateY(0);
-    }
+    .form-box.show { max-height: 600px; opacity: 1; }
 
     .form-box input, .form-box textarea, .form-box select {
       width: 100%;
-      padding: 0.95rem 1rem;
+      padding: 0.95rem;
       margin: 0.5rem 0;
       border: 2px solid var(--border);
       border-radius: var(--radius-sm);
       background: transparent;
       color: var(--text);
       font-size: 0.95rem;
-      transition: all 0.3s ease;
       outline: none;
+      transition: all 0.3s ease;
     }
-    .form-box input:focus, .form-box textarea:focus, .form-box select:focus {
+    .form-box input:focus, .form-box select:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 4px var(--primary-soft);
     }
-    .form-box textarea {
-      resize: vertical;
-      min-height: 90px;
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
+    .btn-group { display: flex; gap: 0.75rem; margin-top: 1rem; }
     .btn-group button {
-      flex: 1;
-      padding: 0.95rem;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
+      flex: 1; padding: 0.95rem; border: none; border-radius: var(--radius-sm);
+      font-weight: 600; cursor: pointer; transition: all 0.3s ease;
     }
-    .save-btn {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-      color: white;
-    }
-    .save-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
-    }
-    .cancel-btn {
-      background: transparent;
-      color: var(--danger);
-      border: 2px solid var(--danger);
-    }
-    .cancel-btn:hover {
-      background: var(--danger);
-      color: white;
-    }
+    .save-btn { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; }
+    .cancel-btn { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
 
-    /* ===== LIST CONTAINER ===== */
     .list-container {
       background: var(--card);
       padding: 1.5rem;
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-sm);
-      width: 100%;
     }
-    .list-container h3 {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .list-container ul {
-      list-style: none;
-      margin-top: 1rem;
-    }
+    .list-container ul { list-style: none; margin-top: 1rem; }
     .list-container li {
       padding: 1.15rem 1rem;
       border-bottom: 1px solid var(--border);
@@ -396,33 +267,11 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 0.75rem;
-      width: 100%;
-      transition: all 0.25s ease;
-      animation: listItemFadeIn 0.4s ease forwards;
-      opacity: 0;
+      animation: itemFade 0.4s ease forwards; opacity: 0;
     }
-    @keyframes listItemFadeIn {
-      to { opacity: 1; }
-    }
-    .list-container li:hover {
-      background: var(--primary-soft);
-      border-radius: var(--radius-sm);
-      transform: translateX(6px);
-    }
-    .list-container li > div {
-      flex: 1;
-      min-width: 180px;
-      word-wrap: break-word;
-    }
-    .list-container li strong {
-      font-size: 1rem;
-      display: block;
-      margin-bottom: 0.25rem;
-    }
-    .list-container li:last-child {
-      border-bottom: none;
-    }
-
+    @keyframes itemFade { to { opacity: 1; } }
+    .list-container li:hover { background: var(--primary-soft); border-radius: var(--radius-sm); transform: translateX(6px); }
+    .list-container li > div { flex: 1; min-width: 180px; }
     .delete-btn {
       padding: 0.6rem 1rem;
       background: transparent;
@@ -430,59 +279,33 @@
       border: 2px solid var(--danger);
       border-radius: var(--radius-sm);
       cursor: pointer;
-      font-size: 0.85rem;
       font-weight: 600;
       transition: all 0.25s ease;
-      flex-shrink: 0;
     }
-    .delete-btn:hover {
-      background: var(--danger);
-      color: white;
-      transform: scale(1.05);
-    }
-
+    .delete-btn:hover { background: var(--danger); color: white; }
     .empty-msg {
       color: var(--text-soft);
-      font-style: italic;
       text-align: center;
       padding: 2.5rem 1rem;
-    }
-    .empty-msg span {
-      font-size: 2rem;
-      display: block;
-      margin-bottom: 0.5rem;
-      opacity: 0.5;
+      font-style: italic;
     }
 
-    /* ===== OFFLINE BADGE ===== */
-    .offline-badge {
+    .offline-status {
       position: fixed;
-      bottom: 1rem;
-      right: 1rem;
-      background: var(--success);
-      color: white;
-      padding: 0.5rem 1rem;
-      border-radius: 50px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      box-shadow: var(--shadow-md);
-      z-index: 99;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: all 0.3s ease;
-      pointer-events: none;
+      bottom: 1rem; right: 1rem;
+      background: var(--success); color: white;
+      padding: 0.5rem 1rem; border-radius: 50px;
+      font-size: 0.8rem; font-weight: 600;
+      box-shadow: var(--shadow-md); z-index: 99;
+      opacity: 0; transform: translateY(20px);
+      transition: all 0.3s ease; pointer-events: none;
     }
-    .offline-badge.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    .offline-status.show { opacity: 1; transform: translateY(0); }
   </style>
 </head>
 <body>
 
-  <!-- Offline Badge -->
-  <div class="offline-badge" id="offlineBadge">✅ Ready for Offline Use</div>
-
+  <div class="offline-status" id="offlineStatus">✅ Ready Offline</div>
   <div class="overlay" id="overlay"></div>
   <button class="menu-toggle" id="menuBtn">☰</button>
 
@@ -502,8 +325,6 @@
   </nav>
 
   <main class="content">
-
-    <!-- 📅 SCHEDULE -->
     <section id="schedule" class="section active">
       <h1>📅 Class Schedule</h1>
       <div class="add-btn-container">
@@ -514,12 +335,8 @@
         <input type="text" id="schedSubject" placeholder="Subject Name" required>
         <select id="schedDay">
           <option value="">-- Select Day --</option>
-          <option>Monday</option>
-          <option>Tuesday</option>
-          <option>Wednesday</option>
-          <option>Thursday</option>
-          <option>Friday</option>
-          <option>Saturday</option>
+          <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+          <option>Thursday</option><option>Friday</option><option>Saturday</option>
         </select>
         <input type="time" id="schedStart" required>
         <input type="time" id="schedEnd" required>
@@ -534,7 +351,6 @@
       </div>
     </section>
 
-    <!-- 📝 ASSIGNMENTS -->
     <section id="assignments" class="section">
       <h1>📝 Assignments & Deadlines</h1>
       <div class="add-btn-container">
@@ -556,7 +372,6 @@
       </div>
     </section>
 
-    <!-- 📊 PROJECTS -->
     <section id="projects" class="section">
       <h1>📊 Group Project Tracker</h1>
       <div class="add-btn-container">
@@ -577,15 +392,28 @@
         <ul id="projList"></ul>
       </div>
     </section>
-
   </main>
 
   <script>
-    // ===== DATA STORAGE — PERMANENT EVEN OFFLINE =====
+    // ===== SERVICE WORKER REGISTRATION — ITO ANG NAGPAGANA NG OFFLINE =====
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('sw.js');
+          console.log('✅ Service Worker Registered:', registration.scope);
+          const badge = document.getElementById('offlineStatus');
+          setTimeout(() => { badge.classList.add('show'); }, 800);
+          setTimeout(() => { badge.classList.remove('show'); }, 4000);
+        } catch (err) {
+          console.log('⚠️ SW Registration failed:', err);
+        }
+      });
+    }
+
+    // ===== DATA STORAGE =====
     function getData(key) {
-      try {
-        return JSON.parse(localStorage.getItem(key)) || [];
-      } catch { return []; }
+      try { return JSON.parse(localStorage.getItem(key)) || []; }
+      catch { return []; }
     }
     function saveData(key, data) {
       localStorage.setItem(key, JSON.stringify(data));
@@ -597,15 +425,8 @@
     const closeBtn = document.getElementById('closeBtn');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
-
-    function openSidebar() {
-      sidebar.classList.add('open');
-      overlay.classList.add('show');
-    }
-    function closeSidebar() {
-      sidebar.classList.remove('open');
-      overlay.classList.remove('show');
-    }
+    function openSidebar() { sidebar.classList.add('open'); overlay.classList.add('show'); }
+    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
     menuBtn.addEventListener('click', openSidebar);
     closeBtn.addEventListener('click', closeSidebar);
     overlay.addEventListener('click', closeSidebar);
@@ -613,7 +434,7 @@
     // ===== NAVIGATION =====
     document.querySelectorAll('.nav-links li').forEach(link => {
       link.addEventListener('click', () => {
-        const targetId = link.getAttribute('data-target');
+        const targetId = link.dataset.target;
         document.querySelectorAll('.nav-links li').forEach(l => l.classList.remove('active'));
         link.classList.add('active');
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -623,20 +444,19 @@
     });
 
     // ===== DARK MODE =====
-    document.getElementById('darkModeBtn').addEventListener('click', function() {
-      document.body.classList.toggle('dark-mode');
-      this.textContent = document.body.classList.contains('dark-mode') ? '☀️ Light Mode' : '🌙 Dark Mode';
-      localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
-    });
-    // Load saved dark mode
+    const darkModeBtn = document.getElementById('darkModeBtn');
     if (localStorage.getItem('darkMode') === 'true') {
       document.body.classList.add('dark-mode');
-      document.getElementById('darkModeBtn').textContent = '☀️ Light Mode';
+      darkModeBtn.textContent = '☀️ Light Mode';
     }
+    darkModeBtn.addEventListener('click', function() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      this.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+      localStorage.setItem('darkMode', isDark);
+    });
 
-    // ==================================================
-    // 📅 SCHEDULE — Show/Hide Form
-    // ==================================================
+    // ===== SCHEDULE =====
     const schedForm = document.getElementById('schedFormBox');
     document.getElementById('showSchedFormBtn').onclick = () => schedForm.classList.add('show');
     document.getElementById('hideSchedFormBtn').onclick = () => {
@@ -659,7 +479,7 @@
       const list = document.getElementById('scheduleList');
       const data = getData('schedule');
       list.innerHTML = data.length === 0
-        ? '<li class="empty-msg"><span>📅</span>No schedule added yet.</li>'
+        ? '<li class="empty-msg">📅 No schedule added yet.</li>'
         : data.map((item, i) => `
           <li style="animation-delay: ${i * 60}ms">
             <div><strong>${item.subject}</strong>${item.day} — ${item.start} to ${item.end}</div>
@@ -667,9 +487,7 @@
           </li>`).join('');
     }
 
-    // ==================================================
-    // 📝 ASSIGNMENTS — Show/Hide Form
-    // ==================================================
+    // ===== ASSIGNMENTS =====
     const assignForm = document.getElementById('assignFormBox');
     document.getElementById('showAssignFormBtn').onclick = () => assignForm.classList.add('show');
     document.getElementById('hideAssignFormBtn').onclick = () => {
@@ -691,17 +509,15 @@
       const list = document.getElementById('assignList');
       const data = getData('assignments');
       list.innerHTML = data.length === 0
-        ? '<li class="empty-msg"><span>📝</span>No assignments added yet.</li>'
+        ? '<li class="empty-msg">📝 No assignments added yet.</li>'
         : data.map((item, i) => `
           <li style="animation-delay: ${i * 60}ms">
-            <div><strong>${item.title}</strong>${item.desc ? item.desc+'<br>' : ''}📅 Due: ${item.due}</div>
+            <div><strong>${item.title}</strong>${item.desc ? '<br>'+item.desc : ''}<br>📅 Due: ${item.due}</div>
             <button class="delete-btn" data-key="assignments" data-idx="${i}">Delete</button>
           </li>`).join('');
     }
 
-    // ==================================================
-    // 📊 PROJECTS — Show/Hide Form
-    // ==================================================
+    // ===== PROJECTS =====
     const projForm = document.getElementById('projFormBox');
     document.getElementById('showProjFormBtn').onclick = () => projForm.classList.add('show');
     document.getElementById('hideProjFormBtn').onclick = () => {
@@ -723,10 +539,10 @@
       const list = document.getElementById('projList');
       const data = getData('projects');
       list.innerHTML = data.length === 0
-        ? '<li class="empty-msg"><span>📊</span>No projects added yet.</li>'
+        ? '<li class="empty-msg">📊 No projects added yet.</li>'
         : data.map((item, i) => `
           <li style="animation-delay: ${i * 60}ms">
-            <div><strong>${item.name}</strong>${item.members ? '👥 '+item.members+'<br>' : ''}📅 Deadline: ${item.deadline}</div>
+            <div><strong>${item.name}</strong>${item.members ? '<br>👥 '+item.members : ''}<br>📅 Deadline: ${item.deadline}</div>
             <button class="delete-btn" data-key="projects" data-idx="${i}">Delete</button>
           </li>`).join('');
     }
@@ -740,13 +556,6 @@
         data.splice(idx, 1);
         saveData(key, data);
       }
-    });
-
-    // ===== OFFLINE DETECTION & BADGE =====
-    const offlineBadge = document.getElementById('offlineBadge');
-    window.addEventListener('load', () => {
-      setTimeout(() => offlineBadge.classList.add('show'), 500);
-      setTimeout(() => offlineBadge.classList.remove('show'), 3500);
     });
 
     // ===== INITIAL LOAD =====
