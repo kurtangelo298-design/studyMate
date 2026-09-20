@@ -1,8 +1,8 @@
 const CACHE_NAME = 'studymate-v1.2';
 const ASSETS_TO_CACHE = [
-  '',
-  'index.html',
-  'manifest.json'
+  './',
+  './index.html',
+  './manifest.json'
 ];
 
 // ===== INSTALL — I-save lahat sa Cache =====
