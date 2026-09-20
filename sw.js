@@ -1,59 +1,57 @@
-const CACHE_NAME = 'studymate-v1.2';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'studymate-ph-v3';
+const ASSETS = [
   './',
   './index.html',
   './manifest.json'
 ];
 
-// ===== INSTALL — I-save lahat sa Cache =====
+// ✅ I-INSTALL at i-save ang lahat sa cache
 self.addEventListener('install', event => {
-  console.log('✅ Installing Service Worker...');
+  console.log('[StudyMate SW] Installing version:', CACHE_NAME);
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('📦 Caching assets...');
-        return cache.addAll(ASSETS_TO_CACHE);
-      })
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('[StudyMate SW] Caching files...');
+      return cache.addAll(ASSETS);
+    }).then(() => {
+      console.log('[StudyMate SW] ✅ All files cached!');
+      return self.skipWaiting(); // Agad gamitin ang bagong bersyon
+    })
   );
 });
 
-// ===== ACTIVATE — Burahin ang lumang cache =====
-self.addEventListener('activate', event => {
-  console.log('✅ Activating Service Worker...');
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-// ===== FETCH — Kung walang internet, gamitin ang Cache =====
+// ✅ KUNIN — May internet → i-update; Walang internet → gamitin ang cache
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(cachedResponse => {
-        // Kung nasa cache na — ibigay agad
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        // Kung wala — kunin sa internet
-        return fetch(event.request)
-          .then(response => {
-            // I-save sa cache para sa susunod
-            return caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, response.clone());
-                return response;
-              });
-          })
-          .catch(() => {
-            // Walang internet at wala sa cache — fallback
-            console.log('⚠️ Offline — cannot fetch:', event.request.url);
-          });
+    fetch(event.request)
+      .then(response => {
+        // May internet — i-refresh ang cache
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, response.clone());
+          return response;
+        });
       })
+      .catch(() => {
+        // Walang internet — ibigay ang nakatago
+        return caches.match(event.request).then(cached => {
+          if (cached) return cached;
+          console.log('[StudyMate SW] ⚠️ Not cached:', event.request.url);
+        });
+      })
+  );
+});
+
+// ✅ I-UPDATE — Burahin ang lumang cache
+self.addEventListener('activate', event => {
+  console.log('[StudyMate SW] Activating new version...');
+  event.waitUntil(
+    caches.keys().then(names => {
+      return Promise.all(
+        names.filter(name => name !== CACHE_NAME)
+             .map(name => {
+               console.log('[StudyMate SW] Deleting old cache:', name);
+               return caches.delete(name);
+             })
+      );
+    }).then(() => self.clients.claim())
   );
 });
