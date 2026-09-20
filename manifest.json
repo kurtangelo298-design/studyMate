@@ -1,8 +1,9 @@
 {
   "name": "StudyMate PH",
   "short_name": "StudyMate",
-  "description": "Your personal academic companion — Schedule, Assignments, Projects",
+  "description": "Schedule, Assignments & Project Tracker — Works Offline!",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f0f4ff",
   "theme_color": "#2563eb",
