@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="manifest.json">
-  <title>StudyMate PH ✨</title>
+  <title>StudyMate PH</title>
   <style>
     * {
       margin: 0;
@@ -20,6 +20,7 @@
       --primary-light: #3b82f6;
       --primary-soft: rgba(37, 99, 235, 0.12);
       --accent: #8b5cf6;
+      --gold: #f59e0b;
       --bg: #f0f4ff;
       --bg-gradient: linear-gradient(135deg, #eef2ff 0%, #f0f9ff 50%, #fdf4ff 100%);
       --card: #ffffff;
@@ -28,6 +29,7 @@
       --border: #e0e7ff;
       --danger: #ef4444;
       --success: #10b981;
+      --warning: #f59e0b;
       --shadow-sm: 0 2px 8px rgba(37, 99, 235, 0.06);
       --shadow-md: 0 8px 24px rgba(37, 99, 235, 0.12);
       --shadow-lg: 0 16px 48px rgba(37, 99, 235, 0.15);
@@ -59,7 +61,6 @@
       min-height: 100vh;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    /* ===== AUTH PAGES ===== */
     .auth-container {
       min-height: 100vh;
       display: flex;
@@ -75,6 +76,8 @@
       width: 100%;
       max-width: 440px;
       animation: fadeUp 0.5s ease;
+      position: relative;
+      z-index: 10;
     }
     .auth-box.registration {
       max-width: 500px;
@@ -105,6 +108,8 @@
       font-size: 0.95rem;
       outline: none;
       transition: all 0.3s ease;
+      position: relative;
+      z-index: 5;
     }
     .auth-box input:focus, .auth-box select:focus {
       border-color: var(--primary);
@@ -122,6 +127,9 @@
       cursor: pointer;
       margin-top: 0.5rem;
       transition: all 0.3s ease;
+      position: relative;
+      z-index: 10;
+      pointer-events: auto !important;
     }
     .auth-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
     .toggle-auth {
@@ -134,6 +142,7 @@
       color: var(--primary);
       font-weight: 600;
       cursor: pointer;
+      pointer-events: auto !important;
     }
     .toggle-auth span:hover { text-decoration: underline; }
     .form-label {
@@ -143,7 +152,6 @@
       display: block;
     }
     .hidden { display: none !important; }
-    /* ===== ORIGINAL STYLES ===== */
     .menu-toggle {
       position: fixed;
       top: 1rem;
@@ -155,9 +163,10 @@
       border: none;
       border-radius: 50px;
       cursor: pointer;
-      z-index: 100;
+      z-index: 500;
       box-shadow: var(--shadow-md);
       transition: all 0.3s ease;
+      pointer-events: auto !important;
     }
     .menu-toggle:hover { transform: scale(1.08); }
     .overlay {
@@ -169,8 +178,9 @@
       visibility: hidden;
       transition: all 0.3s ease;
       z-index: 150;
+      pointer-events: none;
     }
-    .overlay.show { opacity: 1; visibility: visible; }
+    .overlay.show { opacity: 1; visibility: visible; pointer-events: auto; }
     .sidebar {
       position: fixed;
       top: 0;
@@ -178,15 +188,16 @@
       height: 100vh;
       width: 300px;
       max-width: 88vw;
-      background: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
       transform: translateX(-105%);
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 200;
+      z-index: 300;
       padding: 1.5rem;
       overflow-y: auto;
+      pointer-events: auto !important;
     }
-    body.dark-mode .sidebar { background: rgba(30, 41, 59, 0.85); }
+    body.dark-mode .sidebar { background: rgba(30, 41, 59, 0.95); }
     .sidebar.open { transform: translateX(0); }
     .sidebar-header {
       display: flex;
@@ -213,6 +224,7 @@
       font-size: 1.3rem;
       cursor: pointer;
       transition: all 0.25s ease;
+      pointer-events: auto !important;
     }
     .close-btn:hover { background: var(--danger); color: white; transform: rotate(90deg); }
     .nav-links { list-style: none; }
@@ -223,14 +235,46 @@
       cursor: pointer;
       transition: all 0.3s ease;
       font-weight: 500;
+      pointer-events: auto !important;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .nav-links li:hover, .nav-links li.active {
       background: var(--primary-soft);
       color: var(--primary);
       transform: translateX(4px);
     }
+    .lock-icon {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+    }
+    .premium-badge {
+      background: linear-gradient(135deg, #f59e0b, #eab308);
+      color: white;
+      font-size: 0.65rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 50px;
+      font-weight: 700;
+    }
+    .subscription-status {
+      margin: 1rem 0;
+      padding: 0.75rem;
+      border-radius: var(--radius-sm);
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    .subscription-status.free {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .subscription-status.premium {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      color: #92400e;
+      font-weight: 600;
+    }
     .dark-toggle {
-      margin-top: 2rem;
+      margin-top: 1rem;
       padding-top: 1.5rem;
       border-top: 1px solid var(--border);
     }
@@ -243,9 +287,16 @@
       border-radius: var(--radius-md);
       cursor: pointer;
       font-weight: 600;
+      pointer-events: auto !important;
+      margin-bottom: 0.5rem;
+    }
+    .upgrade-btn {
+      background: linear-gradient(135deg, #f59e0b, #eab308) !important;
+      color: #1f2937 !important;
+      font-weight: 700 !important;
     }
     .logout-btn {
-      margin-top: 1rem;
+      margin-top: 0.5rem;
       background: rgba(239, 68, 68, 0.1) !important;
       color: var(--danger) !important;
     }
@@ -255,6 +306,8 @@
       max-width: 720px;
       margin: 0 auto;
       width: 100%;
+      position: relative;
+      z-index: 10;
     }
     .section {
       display: none;
@@ -275,6 +328,7 @@
       color: transparent;
       font-weight: 700;
     }
+    h2 { font-size: 1.2rem; margin-bottom: 1rem; color: var(--text); }
     .add-btn-container {
       text-align: center;
       margin-bottom: 2rem;
@@ -290,6 +344,7 @@
       cursor: pointer;
       box-shadow: var(--shadow-md);
       transition: all 0.3s ease;
+      pointer-events: auto !important;
     }
     .add-toggle-btn:hover { transform: translateY(-3px); }
     .form-box {
@@ -303,7 +358,7 @@
       overflow: hidden;
       transition: all 0.4s ease;
     }
-    .form-box.show { max-height: 600px; opacity: 1; }
+    .form-box.show { max-height: 900px; opacity: 1; }
     .form-box input, .form-box textarea, .form-box select {
       width: 100%;
       padding: 0.95rem;
@@ -315,15 +370,18 @@
       font-size: 0.95rem;
       outline: none;
       transition: all 0.3s ease;
+      pointer-events: auto;
     }
-    .form-box input:focus, .form-box select:focus {
+    .form-box textarea { min-height: 120px; resize: vertical; }
+    .form-box input:focus, .form-box select:focus, .form-box textarea:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 4px var(--primary-soft);
     }
-    .btn-group { display: flex; gap: 0.75rem; margin-top: 1rem; }
+    .btn-group { display: flex; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
     .btn-group button {
       flex: 1; padding: 0.95rem; border: none; border-radius: var(--radius-sm);
       font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+      pointer-events: auto !important; min-width: 100px;
     }
     .save-btn { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; }
     .cancel-btn { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
@@ -339,31 +397,52 @@
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       flex-wrap: wrap;
       gap: 0.75rem;
       animation: itemFade 0.4s ease forwards; opacity: 0;
+      flex-direction: column;
     }
     @keyframes itemFade { to { opacity: 1; } }
-    .list-container li:hover { background: var(--primary-soft); border-radius: var(--radius-sm); transform: translateX(6px); }
-    .list-container li > div { flex: 1; min-width: 180px; }
-    .delete-btn {
-      padding: 0.6rem 1rem;
-      background: transparent;
-      color: var(--danger);
-      border: 2px solid var(--danger);
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.25s ease;
-    }
-    .delete-btn:hover { background: var(--danger); color: white; }
+    .list-container li:hover { background: var(--primary-soft); border-radius: var(--radius-sm); }
     .empty-msg {
       color: var(--text-soft);
       text-align: center;
       padding: 2.5rem 1rem;
       font-style: italic;
     }
+    .locked-section {
+      text-align: center;
+      padding: 3rem 2rem;
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+    .locked-section .lock-icon-big {
+      font-size: 3rem;
+      color: var(--text-soft);
+      margin-bottom: 1rem;
+    }
+    .locked-section h2 {
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+    .locked-section p {
+      color: var(--text-soft);
+      margin-bottom: 1.5rem;
+    }
+    .upgrade-large-btn {
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #f59e0b, #eab308);
+      color: #1f2937;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .upgrade-large-btn:hover { transform: scale(1.05); }
     .offline-status {
       position: fixed;
       bottom: 1rem; right: 1rem;
@@ -379,55 +458,289 @@
       padding: 0.75rem;
       background: var(--primary-soft);
       border-radius: var(--radius-sm);
-      margin-bottom: 1rem;
+      margin-bottom: 0.5rem;
       font-size: 0.9rem;
+    }
+    /* Subscription Page */
+    .subscription-container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .subscription-card {
+      background: var(--card);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .subscription-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .price-tag {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin: 1rem 0;
+    }
+    .price-tag span {
+      font-size: 1rem;
+      color: var(--text-soft);
+      font-weight: 400;
+    }
+    .feature-list {
+      text-align: left;
+      margin: 1.5rem 0;
+    }
+    .feature-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .feature-list li.included {
+      color: var(--success);
+    }
+    .feature-list li.excluded {
+      color: var(--text-soft);
+      text-decoration: line-through;
+    }
+    .payment-note {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-soft);
+      line-height: 1.5;
+    }
+    .ai-container {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-md);
+    }
+    .chat-box {
+      height: 450px;
+      overflow-y: auto;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      background: rgba(248, 250, 252, 0.5);
+    }
+    body.dark-mode .chat-box { background: rgba(15, 23, 42, 0.5); }
+    .message {
+      margin-bottom: 1rem;
+      padding: 0.9rem 1.1rem;
+      border-radius: 16px;
+      max-width: 85%;
+      line-height: 1.5;
+    }
+    .user-msg {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+    .ai-msg {
+      background: var(--border);
+      color: var(--text);
+      margin-right: auto;
+      border-bottom-left-radius: 4px;
+    }
+    .typing {
+      font-style: italic;
+      color: var(--text-soft);
+    }
+    .ai-input-row {
+      display: flex;
+      gap: 0.75rem;
+    }
+    #ai-input {
+      flex: 1;
+      padding: 0.95rem 1.25rem;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      transition: all 0.3s ease;
+      pointer-events: auto;
+    }
+    #ai-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-soft);
+    }
+    .ai-send-btn {
+      padding: 0.95rem 1.5rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      pointer-events: auto !important;
+    }
+    .ai-send-btn:hover { transform: scale(1.05); }
+    .search-bar {
+      width: 100%;
+      padding: 0.95rem 1.25rem;
+      margin-bottom: 1.5rem;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--card);
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    .search-bar:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-soft);
+    }
+    .filter-row {
+      display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .filter-btn {
+      padding: 0.6rem 1rem;
+      border-radius: 50px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--text-soft);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+    .filter-btn.active {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .note-content {
+      margin: 0.75rem 0;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .note-meta {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+      margin-top: 0.5rem;
+    }
+    .note-actions {
+      display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;
+    }
+    .action-btn {
+      padding: 0.5rem 0.85rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.25s ease;
+      pointer-events: auto !important;
+    }
+    .edit-btn { background: var(--warning); color: white; }
+    .review-btn { background: var(--success); color: white; }
+    .delete-btn { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
+    .delete-btn:hover { background: var(--danger); color: white; }
+    .tag {
+      padding: 0.25rem 0.75rem;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-radius: 50px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .note-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .review-card {
+      background: var(--card);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+      margin-bottom: 2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .review-card:hover { transform: scale(1.02); }
+    .review-card .question {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+    .review-card .answer {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--text);
+      display: none;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .review-card.show-answer .answer { display: block; }
+    .review-hint {
+      color: var(--text-soft);
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+    .review-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    .review-nav button {
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
     }
   </style>
 </head>
 <body>
-  <!-- ===== LOGIN FORM ===== -->
+  <!-- LOGIN FORM -->
   <div class="auth-container" id="loginPage">
     <div class="auth-box">
-      <h2>🔐 Log In — StudyMate PH</h2>
+      <h2>Log In — StudyMate PH</h2>
       <p class="desc">Enter your details to access your account</p>
       <input type="text" id="loginUser" placeholder="Enter your email or username" required autocomplete="username">
       <input type="password" id="loginPass" placeholder="Enter your password" required autocomplete="current-password">
-      <button class="auth-btn" id="loginBtn">✅ Log In</button>
+      <button class="auth-btn" id="loginBtn">Log In</button>
       <div class="toggle-auth">
         Don't have an account? <span id="goToRegister">Register here</span>
       </div>
     </div>
   </div>
-  <!-- ===== REGISTER FORM ===== -->
+
+  <!-- REGISTER FORM -->
   <div class="auth-container hidden" id="registerPage">
     <div class="auth-box registration">
       <h2>Create Account — StudyMate PH</h2>
       <p class="desc">Fill in all information to get started</p>
-      
       <label class="form-label">Full Name:</label>
       <input type="text" id="regFullname" placeholder="Enter your full name" required>
-      
       <label class="form-label">Birthday</label>
       <input type="date" id="regBirthday" required>
-      
       <label class="form-label">Age:</label>
       <input type="text" id="regAge" placeholder="Will be calculated automatically" readonly>
-      
-      <label class="form-label">Email</label>
+      <label class="form-label">Email / Username</label>
       <input type="text" id="regEmail" placeholder="Enter your email or username" required>
-      
       <label class="form-label">Password</label>
       <input type="password" id="regPass" placeholder="Create a strong password" required autocomplete="new-password">
-      
       <label class="form-label">Confirm Password:</label>
       <input type="password" id="regConfirmPass" placeholder="Re-enter your password" required autocomplete="new-password">
-      
       <label class="form-label">Contact Number:</label>
       <input type="tel" id="regContact" placeholder="Enter your contact number" required>
-      
       <label class="form-label">Complete Address:</label>
       <input type="text" id="regAddress" placeholder="Enter your complete address" required>
-      
       <label class="form-label">Security Question:</label>
       <select id="regSecurityQ" required>
         <option value="">-- Select a Security Question --</option>
@@ -437,45 +750,110 @@
         <option>What is the name of your first pet?</option>
         <option>What was your favorite color as a child?</option>
       </select>
-      
       <label class="form-label">Security Answer:</label>
       <input type="text" id="regSecurityA" placeholder="Enter your security answer" required>
-      
-      <button class="auth-btn" id="registerBtn">✅ Create Account</button>
+      <button class="auth-btn" id="registerBtn">Create Account</button>
       <div class="toggle-auth">
         Already have an account? <span id="goToLogin">Log in here</span>
       </div>
     </div>
   </div>
-  <!-- ===== MAIN APPLICATION (Hidden until logged in) ===== -->
+
+  <!-- MAIN APP -->
   <div id="mainApp" class="hidden">
-    <div class="offline-status" id="offlineStatus">✅ Ready Offline</div>
+    <div class="offline-status" id="offlineStatus">Ready Offline</div>
     <div class="overlay" id="overlay"></div>
     <button class="menu-toggle" id="menuBtn">☰</button>
+
     <nav class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <h2>✨ StudyMate PH</h2>
+        <h2>StudyMate PH</h2>
         <button class="close-btn" id="closeBtn">×</button>
       </div>
       <div class="user-info" id="userInfoDisplay"></div>
+      <div class="subscription-status free" id="subStatusBadge">
+        <strong>Free Plan</strong> — Limited Features
+      </div>
       <ul class="nav-links">
-        <li data-target="schedule" class="active">📅 Class Schedule</li>
+        <li data-target="schedule">📅 Class Schedule</li>
         <li data-target="assignments">📝 Assignments</li>
-        <li data-target="projects">📊 Project Tracker</li>
+        <li data-target="projects">📂 Project Tracker</li>
+        <li data-target="ai-assistant">
+          🤖 AI Assistant
+          <span class="lock-icon" id="aiLock">🔒</span>
+        </li>
+        <li data-target="notes">
+          📋 Notes & Reviewer
+          <span class="lock-icon" id="notesLock">🔒</span>
+        </li>
+        <li data-target="friends">
+          👥 Friends & Chat
+          <span class="lock-icon" id="friendsLock">🔒</span>
+        </li>
       </ul>
       <div class="dark-toggle">
-        <button id="darkModeBtn">🌙 Dark Mode</button>
-        <button class="logout-btn" id="logoutBtn">🚪 Log Out</button>
+        <button id="subscriptionPageBtn" class="upgrade-btn">⭐ Upgrade to Premium — ₱50</button>
+        <button id="darkModeBtn">Dark Mode</button>
+        <button class="logout-btn" id="logoutBtn">Log Out</button>
       </div>
     </nav>
+
     <main class="content">
-      <section id="schedule" class="section active">
-        <h1>📅 Class Schedule</h1>
+            <!-- SUBSCRIPTION PAGE -->
+       <section id="subscription" class="section">
+         <h1>Upgrade to Premium</h1>
+         <div class="subscription-container">
+           <div class="subscription-card">
+             <h2>StudyMate PH Premium</h2>
+             <p>Unlock ALL features and study without limits!</p>
+             
+             <div class="price-tag">₱50 <span>one-time payment</span></div>
+             
+             <ul class="feature-list">
+               <li class="included">✅ Class Schedule</li>
+               <li class="included">✅ Assignments Tracker</li>
+               <li class="included">✅ Project Tracker</li>
+               <li class="included">✅ AI Study Assistant</li>
+               <li class="included">✅ Digital Notes & Reviewer</li>
+               <li class="included">✅ Friends & Group Chat</li>
+               <li class="included">✅ Priority Support</li>
+             </ul>
+
+             <!-- KAPAG PININDOT → DIREKTANG GCASH -->
+             <a href="https://m.gcash.com/send?to=09301329437&amount=50" 
+                style="text-decoration: none; display: block; margin: 1rem 0;">
+               <button class="upgrade-large-btn" style="width: 100%; font-size: 1.1rem;">
+                 💳 Subscribe — ₱50 via GCash
+               </button>
+             </a>
+             
+             <button class="upgrade-large-btn" id="payPremiumBtn" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 0.5rem;">
+                 ✅ Paid? Tap to Activate
+             </button>
+             
+             <p class="payment-note">
+               <strong>Send payment to:</strong><br>
+               <span style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">09301329437</span><br>
+               Amount: <strong>₱50.00</strong><br>
+               <em>Name: (Ilagay pangalan ng may-ari)</em><br><br>
+               <strong>Steps:</strong><br>
+               1. Pindutin ang "Subscribe — ₱50 via GCash"<br>
+               2. Bubukas ang GCash — i-confirm ang pagpadala<br>
+               3. Bumalik dito → pindutin ang <strong>"Paid? Tap to Activate"</strong><br>
+               ✅ Agad magiging Premium!
+             </p>
+           </div>
+         </div>
+       </section>
+
+      <!-- SCHEDULE -->
+      <section id="schedule" class="section">
+        <h1>Class Schedule</h1>
         <div class="add-btn-container">
-          <button class="add-toggle-btn" id="showSchedFormBtn">➕ Add New Schedule</button>
+          <button class="add-toggle-btn" id="showSchedFormBtn">Add New Schedule</button>
         </div>
         <div class="form-box" id="schedFormBox">
-          <h3>📅 New Schedule</h3>
+          <h3>New Schedule</h3>
           <input type="text" id="schedSubject" placeholder="Enter subject name" required>
           <select id="schedDay">
             <option value="">-- Select Day --</option>
@@ -485,59 +863,280 @@
           <input type="time" id="schedStart" required>
           <input type="time" id="schedEnd" required>
           <div class="btn-group">
-            <button class="save-btn" id="addSchedBtn">✅ Save</button>
+            <button class="save-btn" id="addSchedBtn">Save</button>
             <button class="cancel-btn" id="hideSchedFormBtn">✕ Cancel</button>
           </div>
         </div>
         <div class="list-container">
-          <h3>📋 My Schedule</h3>
+          <h3>My Schedule</h3>
           <ul id="scheduleList"></ul>
         </div>
       </section>
+
+      <!-- ASSIGNMENTS -->
       <section id="assignments" class="section">
-        <h1>📝 Assignments & Deadlines</h1>
+        <h1>Assignments & Deadlines</h1>
         <div class="add-btn-container">
-          <button class="add-toggle-btn" id="showAssignFormBtn">➕ Add New Assignment</button>
+          <button class="add-toggle-btn" id="showAssignFormBtn">Add New Assignment</button>
         </div>
         <div class="form-box" id="assignFormBox">
-          <h3>📝 New Assignment</h3>
+          <h3>New Assignment</h3>
           <input type="text" id="assignTitle" placeholder="Enter assignment title" required>
           <textarea id="assignDesc" placeholder="Enter description (optional)"></textarea>
           <input type="date" id="assignDue" required>
           <div class="btn-group">
-            <button class="save-btn" id="addAssignBtn">✅ Save</button>
+            <button class="save-btn" id="addAssignBtn">Save</button>
             <button class="cancel-btn" id="hideAssignFormBtn">✕ Cancel</button>
           </div>
         </div>
         <div class="list-container">
-          <h3>📋 My Assignments</h3>
+          <h3>My Assignments</h3>
           <ul id="assignList"></ul>
         </div>
       </section>
+
+      <!-- PROJECTS -->
       <section id="projects" class="section">
-        <h1>📊 Group Project Tracker</h1>
+        <h1>Group Project Tracker</h1>
         <div class="add-btn-container">
-          <button class="add-toggle-btn" id="showProjFormBtn">➕ Add New Project</button>
+          <button class="add-toggle-btn" id="showProjFormBtn">Add New Project</button>
         </div>
         <div class="form-box" id="projFormBox">
-          <h3>📊 New Project</h3>
+          <h3>New Project</h3>
           <input type="text" id="projName" placeholder="Enter project name" required>
           <input type="text" id="projMembers" placeholder="Enter member names, separated by commas">
           <input type="date" id="projDeadline" required>
           <div class="btn-group">
-            <button class="save-btn" id="addProjBtn">✅ Save</button>
+            <button class="save-btn" id="addProjBtn">Save</button>
             <button class="cancel-btn" id="hideProjFormBtn">✕ Cancel</button>
           </div>
         </div>
         <div class="list-container">
-          <h3>📋 My Projects</h3>
+          <h3>My Projects</h3>
           <ul id="projList"></ul>
+        </div>
+      </section>
+
+      <!-- AI ASSISTANT (LOCKED FOR FREE) -->
+      <section id="ai-assistant" class="section">
+        <div id="aiContentWrapper">
+          <h1>AI Study Assistant</h1>
+          <div class="ai-container">
+            <div class="chat-box" id="chat-box">
+              <div class="message ai-msg">
+                <strong>StudyMate AI:</strong> Hello! I'm your study assistant! Ask me anything — lessons, definitions, explanations, homework, or any topic you want to learn. I'm here to help!
+              </div>
+            </div>
+            <div class="ai-input-row">
+              <input type="text" id="ai-input" placeholder="Ask me anything... e.g., 'Explain photosynthesis'">
+              <button class="ai-send-btn" id="ai-send">Send</button>
+            </div>
+          </div>
+        </div>
+        <div id="aiLockedView" class="locked-section hidden">
+          <div class="lock-icon-big">🔒</div>
+          <h2>AI Assistant is Premium Feature</h2>
+          <p>Upgrade to Premium for ₱50 to unlock AI Assistant, Notes & Reviewer, and Friends & Chat!</p>
+          <button class="upgrade-large-btn" id="goSubFromAi">View Premium Plans</button>
+        </div>
+      </section>
+
+      <!-- NOTES & REVIEWER (LOCKED FOR FREE) -->
+      <section id="notes" class="section">
+        <div id="notesContentWrapper">
+          <h1>📝 Digital Notes & Reviewer</h1>
+          <input type="text" class="search-bar" id="noteSearch" placeholder="🔍 Search your notes...">
+          <div class="filter-row">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="note">Notes</button>
+            <button class="filter-btn" data-filter="reviewer">Reviewers</button>
+            <button class="filter-btn" data-filter="flashcard">Flashcards</button>
+          </div>
+          <div class="add-btn-container">
+            <button class="add-toggle-btn" id="showNoteFormBtn">+ Add New Note / Reviewer</button>
+          </div>
+          <div class="form-box" id="noteFormBox">
+            <h3 id="noteFormTitle">Create New Note</h3>
+            <input type="text" id="noteTitle" placeholder="Title / Topic" required>
+            <select id="noteType">
+              <option value="note">📝 Regular Note</option>
+              <option value="reviewer">📋 Reviewer (Q&A)</option>
+              <option value="flashcard">🃏 Flashcard</option>
+            </select>
+            <input type="text" id="noteSubject" placeholder="Subject / Tag (e.g., Science, Math)">
+            <textarea id="noteContent" placeholder="Write your notes here...&#10;&#10;For Reviewer format:&#10;Q: Question here&#10;A: Answer here" required></textarea>
+            <input type="hidden" id="editNoteId" value="">
+            <div class="btn-group">
+              <button class="save-btn" id="saveNoteBtn">Save Note</button>
+              <button class="cancel-btn" id="hideNoteFormBtn">✕ Cancel</button>
+            </div>
+          </div>
+          <div class="list-container hidden" id="reviewModeContainer">
+            <h2>🎯 Review Mode</h2>
+            <div class="review-card" id="reviewCard">
+              <div class="question" id="reviewQuestion">Click to reveal answer</div>
+              <div class="answer" id="reviewAnswer"></div>
+              <p class="review-hint">Tap/Click card to flip</p>
+            </div>
+            <div class="review-nav">
+              <button class="cancel-btn" id="exitReviewBtn">Exit</button>
+              <span id="reviewCounter">1 / 5</span>
+              <button class="save-btn" id="nextReviewBtn">Next →</button>
+            </div>
+          </div>
+          <div class="list-container" id="notesListContainer">
+            <h3>My Notes</h3>
+            <ul id="notesList"></ul>
+          </div>
+        </div>
+        <div id="notesLockedView" class="locked-section hidden">
+          <div class="lock-icon-big">🔒</div>
+          <h2>Notes & Reviewer is Premium Feature</h2>
+          <p>Upgrade to Premium for ₱50 to unlock unlimited notes, reviewers, and flashcards!</p>
+          <button class="upgrade-large-btn" id="goSubFromNotes">View Premium Plans</button>
+        </div>
+      </section>
+
+      <!-- FRIENDS & CHAT (LOCKED FOR FREE) -->
+      <section id="friends" class="section">
+        <div id="friendsContentWrapper">
+          <h1>👥 Friends & Chat</h1>
+          <p style="text-align:center; color:var(--text-soft); margin-bottom:1.5rem;">Connect with classmates, send messages, and form study groups!</p>
+          <div class="list-container">
+            <h3>Friend Requests</h3>
+            <ul id="friendRequestsList" class="empty-msg">No pending requests</ul>
+          </div>
+          <div class="list-container" style="margin-top:1.5rem;">
+            <h3>My Friends</h3>
+            <ul id="friendsList" class="empty-msg">No friends yet. Search to add!</ul>
+          </div>
+        </div>
+        <div id="friendsLockedView" class="locked-section hidden">
+          <div class="lock-icon-big">🔒</div>
+          <h2>Friends & Chat is Premium Feature</h2>
+          <p>Upgrade to Premium for ₱50 to connect with classmates and chat!</p>
+          <button class="upgrade-large-btn" id="goSubFromFriends">View Premium Plans</button>
         </div>
       </section>
     </main>
   </div>
+
   <script>
-    // ===== PAGE NAVIGATION =====
+    // ============= SUBSCRIPTION SYSTEM =============
+    const PREMIUM_PRICE = 50;
+
+    function setStorage(key, value) {
+      try { localStorage.setItem(key, value); return true; }
+      catch (e) { console.error('Storage error:', e); return false; }
+    }
+    function getStorage(key) {
+      try { return localStorage.getItem(key); }
+      catch (e) { console.error('Storage read error:', e); return null; }
+    }
+    function getData(key) {
+      try { const d = getStorage(key); return d ? JSON.parse(d) : []; }
+      catch { return []; }
+    }
+    function saveData(key, data) {
+      setStorage(key, JSON.stringify(data));
+      renderAll();
+    }
+
+    // Check if current user is Premium
+    function isPremium() {
+      const currentUser = getStorage('currentUser');
+      if (!currentUser) return false;
+      try {
+        const user = JSON.parse(currentUser);
+        const users = getData('studyMateUsers');
+        const found = users.find(u => u.email === user.email);
+        return found && found.isPremium === true;
+      } catch { return false; }
+    }
+
+    // Update UI based on subscription status
+    function updateSubscriptionUI() {
+      const premium = isPremium();
+      const badge = document.getElementById('subStatusBadge');
+      
+      if (premium) {
+        badge.className = 'subscription-status premium';
+        badge.innerHTML = '⭐ <strong>Premium Member</strong> — All Features Unlocked!';
+        document.getElementById('aiLock').classList.add('hidden');
+        document.getElementById('notesLock').classList.add('hidden');
+        document.getElementById('friendsLock').classList.add('hidden');
+        document.getElementById('subscriptionPageBtn').classList.add('hidden');
+      } else {
+        badge.className = 'subscription-status free';
+        badge.innerHTML = '<strong>Free Plan</strong> — Limited Features';
+        document.getElementById('aiLock').classList.remove('hidden');
+        document.getElementById('notesLock').classList.remove('hidden');
+        document.getElementById('friendsLock').classList.remove('hidden');
+        document.getElementById('subscriptionPageBtn').classList.remove('hidden');
+      }
+    }
+
+    // Show/Hide locked content based on section
+    function checkSectionAccess(sectionId) {
+      const premium = isPremium();
+      const lockedIds = ['ai-assistant', 'notes', 'friends'];
+      
+      if (!lockedIds.includes(sectionId)) return true;
+      if (premium) return true;
+
+      // Lock the section content
+      const wrapper = document.getElementById(`${sectionId.replace('-assistant','').replace('ai','ai')}ContentWrapper`) || 
+                      document.getElementById('aiContentWrapper');
+      const lockedView = document.getElementById(`${sectionId.replace('-assistant','').replace('ai','ai')}LockedView`) || 
+                        document.getElementById('aiLockedView');
+      
+      if (sectionId === 'ai-assistant') {
+        document.getElementById('aiContentWrapper').classList.add('hidden');
+        document.getElementById('aiLockedView').classList.remove('hidden');
+      } else if (sectionId === 'notes') {
+        document.getElementById('notesContentWrapper').classList.add('hidden');
+        document.getElementById('notesLockedView').classList.remove('hidden');
+      } else if (sectionId === 'friends') {
+        document.getElementById('friendsContentWrapper').classList.add('hidden');
+        document.getElementById('friendsLockedView').classList.remove('hidden');
+      }
+      return false;
+    }
+
+    // Activate Premium
+    function activatePremium() {
+      const currentUser = getStorage('currentUser');
+      if (!currentUser) return;
+      try {
+        const user = JSON.parse(currentUser);
+        const users = getData('studyMateUsers');
+        const idx = users.findIndex(u => u.email === user.email);
+        if (idx > -1) {
+          users[idx].isPremium = true;
+          setStorage('studyMateUsers',JSON.stringify(users));
+          updateSubscriptionUI();
+          alert('✅ Premium Activated! Thank you! All features are now unlocked!');
+          showSection('subscription');
+        }
+      } catch (e) {
+        console.error('Premium activation error:', e);
+        alert('❌ Error activating Premium. Please try again.');
+      }
+    }
+
+    // ============= AUTHENTICATION =============
+    let currentUserData = null;
+
+    function calculateAge(birthDateStr) {
+      if (!birthDateStr) return '';
+      const birth = new Date(birthDateStr);
+      const today = new Date();
+      let age = today.getFullYear() - birth.getFullYear();
+      const m = today.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+      return age;
+    }
+
     function showPage(pageId) {
       document.getElementById('loginPage').classList.add('hidden');
       document.getElementById('registerPage').classList.add('hidden');
@@ -545,50 +1144,63 @@
       document.getElementById(pageId).classList.remove('hidden');
     }
 
-    // ===== SAFE LOCALSTORAGE WRAPPER =====
-    function setStorage(key, value) {
-      try {
-        localStorage.setItem(key, value);
-        return true;
-      } catch (e) {
-        console.error('Storage error:', e);
-        return false;
+    function showSection(sectionId) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(sectionId).classList.add('active');
+      document.querySelectorAll('.nav-links li').forEach(li => {
+        li.classList.remove('active');
+        if (li.dataset.target === sectionId) li.classList.add('active');
+      });
+      // Check access
+      if (['ai-assistant','notes','friends'].includes(sectionId)) {
+        if (!isPremium()) {
+          // Show locked view
+          if (sectionId === 'ai-assistant') {
+            document.getElementById('aiContentWrapper').classList.add('hidden');
+            document.getElementById('aiLockedView').classList.remove('hidden');
+          } else if (sectionId === 'notes') {
+            document.getElementById('notesContentWrapper').classList.add('hidden');
+            document.getElementById('notesLockedView').classList.remove('hidden');
+          } else if (sectionId === 'friends') {
+            document.getElementById('friendsContentWrapper').classList.add('hidden');
+            document.getElementById('friendsLockedView').classList.remove('hidden');
+          }
+        } else {
+          // Unlock view
+          if (sectionId === 'ai-assistant') {
+            document.getElementById('aiContentWrapper').classList.remove('hidden');
+            document.getElementById('aiLockedView').classList.add('hidden');
+          } else if (sectionId === 'notes') {
+            document.getElementById('notesContentWrapper').classList.remove('hidden');
+            document.getElementById('notesLockedView').classList.add('hidden');
+          } else if (sectionId === 'friends') {
+            document.getElementById('friendsContentWrapper').classList.remove('hidden');
+            document.getElementById('friendsLockedView').classList.add('hidden');
+          }
+        }
       }
+      closeSidebar();
     }
-    function getStorage(key) {
-      try {
-        return localStorage.getItem(key);
-      } catch (e) {
-        console.error('Storage read error:', e);
-        return null;
-      }
+
+    function openSidebar() {
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('overlay').classList.add('show');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('overlay').classList.remove('show');
     }
 
-    // ===== CALCULATE AGE FROM BIRTHDAY =====
-    document.getElementById('regBirthday').addEventListener('change', function() {
-      const bday = new Date(this.value);
-      if (isNaN(bday.getTime())) return;
-      const today = new Date();
-      let age = today.getFullYear() - bday.getFullYear();
-      const monthDiff = today.getMonth() - bday.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < bday.getDate())) {
-        age--;
-      }
-      document.getElementById('regAge').value = age + ' years old';
+    // Registration auto age
+    document.getElementById('regBirthday').addEventListener('change', e => {
+      document.getElementById('regAge').value = calculateAge(e.target.value);
     });
 
-    // ===== SWITCH BETWEEN LOGIN AND REGISTER =====
-    document.getElementById('goToRegister').addEventListener('click', () => {
-      showPage('registerPage');
-    });
-    document.getElementById('goToLogin').addEventListener('click', () => {
-      showPage('loginPage');
-    });
-
-    // ===== REGISTER HANDLER =====
+    // Register
     document.getElementById('registerBtn').addEventListener('click', () => {
       const fullname = document.getElementById('regFullname').value.trim();
       const birthday = document.getElementById('regBirthday').value;
+      const age = document.getElementById('regAge').value;
       const email = document.getElementById('regEmail').value.trim();
       const pass = document.getElementById('regPass').value;
       const confirmPass = document.getElementById('regConfirmPass').value;
@@ -596,264 +1208,436 @@
       const address = document.getElementById('regAddress').value.trim();
       const secQ = document.getElementById('regSecurityQ').value;
       const secA = document.getElementById('regSecurityA').value.trim();
-      
-      if (!fullname || !birthday || !email || !pass || !confirmPass || !contact || !address || !secQ || !secA) {
-        return alert('Please fill in ALL required fields!');
+
+      if (!fullname || !birthday || !email || !pass || !contact || !address || !secQ || !secA) {
+        alert('⚠️ Please fill in ALL required fields.');
+        return;
       }
       if (pass !== confirmPass) {
-        return alert('Passwords do not match! Please re-enter the same password.');
+        alert('❌ Passwords do not match!');
+        return;
       }
       if (pass.length < 6) {
-        return alert('Password must be at least 6 characters long!');
+        alert('⚠️ Password must be at least 6 characters.');
+        return;
       }
-      
-      const users = JSON.parse(getStorage('studyMateUsers') || '[]');
-      const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      if (exists) {
-        return alert('An account with this email/username already exists!');
+
+      const users = getData('studyMateUsers');
+      if (users.find(u => u.email === email)) {
+        alert('❌ Account already exists with this email/username.');
+        return;
       }
-      
+
       const newUser = {
-        fullname, birthday, email: email.toLowerCase(),
-        password: pass, contact, address,
-        securityQ: secQ, securityA: secA.toLowerCase()
+        fullname, birthday, age, email, password: pass,
+        contact, address, securityQuestion: secQ, securityAnswer: secA,
+        isPremium: false,
+        createdAt: new Date().toISOString()
       };
       users.push(newUser);
       setStorage('studyMateUsers', JSON.stringify(users));
-      
-      alert('✅ Account created successfully! You may now log in.');
-      
-      ['regFullname','regBirthday','regAge','regEmail','regPass','regConfirmPass','regContact','regAddress','regSecurityQ','regSecurityA']
-        .forEach(id => document.getElementById(id).value = '');
-      
+      alert('✅ Account created successfully! Please log in.');
+      // Clear form
+      document.querySelectorAll('#registerPage input, #registerPage select').forEach(el => el.value = '');
       showPage('loginPage');
     });
 
-    // ===== LOGIN HANDLER =====
+    // Login
     document.getElementById('loginBtn').addEventListener('click', () => {
-      const email = document.getElementById('loginUser').value.trim().toLowerCase();
+      const email = document.getElementById('loginUser').value.trim();
       const pass = document.getElementById('loginPass').value;
-      
-      if (!email || !pass) {
-        return alert('Please enter your login details!');
+      const users = getData('studyMateUsers');
+      const found = users.find(u => u.email === email && u.password === pass);
+      if (!found) {
+        alert('❌ Invalid email or password.');
+        return;
       }
-      
-      const users = JSON.parse(getStorage('studyMateUsers') || '[]');
-      const user = users.find(u => u.email === email && u.password === pass);
-      
-      if (!user) {
-        return alert('❌ Incorrect email/username or password!');
-      }
-      
-      // Save session
-      setStorage('currentUser', JSON.stringify({
-        fullname: user.fullname,
-        email: user.email
-      }));
-      
-      document.getElementById('userInfoDisplay').innerHTML = `
-        <strong>${user.fullname}</strong><br>
-        <small>${user.email}</small>
-      `;
-      
+      setStorage('currentUser', JSON.stringify({ email: found.email, fullname: found.fullname }));
+      currentUserData = found;
+      document.getElementById('userInfoDisplay').innerHTML = `<strong>${found.fullname}</strong><br><small>${found.email}</small>`;
+      updateSubscriptionUI();
       showPage('mainApp');
+      showSection('schedule');
       renderAll();
     });
 
-    // ===== LOGOUT HANDLER =====
+    // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => {
-      localStorage.removeItem('currentUser');
-      showPage('loginPage');
-      document.getElementById('loginUser').value = '';
-      document.getElementById('loginPass').value = '';
-    });
-
-    // ===== CHECK EXISTING SESSION =====
-    function checkSession() {
-      const currentUser = getStorage('currentUser');
-      if (currentUser) {
-        try {
-          const user = JSON.parse(currentUser);
-          document.getElementById('userInfoDisplay').innerHTML = `
-            <strong>${user.fullname}</strong><br>
-            <small>${user.email}</small>
-          `;
-          showPage('mainApp');
-          renderAll();
-        } catch (e) {
-          localStorage.removeItem('currentUser');
-          showPage('loginPage');
-        }
-      } else {
+      if (confirm('Log out?')) {
+        setStorage('currentUser', '');
+        currentUserData = null;
         showPage('loginPage');
       }
-    }
-
-    // ===== SERVICE WORKER =====
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', async () => {
-        try {
-          const registration = await navigator.serviceWorker.register('sw.js');
-          console.log('✅ Service Worker Registered:', registration.scope);
-          const badge = document.getElementById('offlineStatus');
-          setTimeout(() => { badge.classList.add('show'); }, 800);
-          setTimeout(() => { badge.classList.remove('show'); }, 4000);
-        } catch (err) {
-          console.log('⚠️ SW Registration failed:', err);
-        }
-      });
-    }
-
-    function getData(key) {
-      try {
-        const data = getStorage(key);
-        return data ? JSON.parse(data) : [];
-      } catch { return []; }
-    }
-    function saveData(key, data) {
-      setStorage(key, JSON.stringify(data));
-      renderAll();
-    }
-
-    const menuBtn = document.getElementById('menuBtn');
-    const closeBtn = document.getElementById('closeBtn');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    function openSidebar() { sidebar.classList.add('open'); overlay.classList.add('show'); }
-    function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('show'); }
-    menuBtn.addEventListener('click', openSidebar);
-    closeBtn.addEventListener('click', closeSidebar);
-    overlay.addEventListener('click', closeSidebar);
-    
-    document.querySelectorAll('.nav-links li').forEach(link => {
-      link.addEventListener('click', () => {
-        const targetId = link.dataset.target;
-        document.querySelectorAll('.nav-links li').forEach(l => l.classList.remove('active'));
-        link.classList.add('active');
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.getElementById(targetId).classList.add('active');
-        closeSidebar();
-      });
     });
 
-    const darkModeBtn = document.getElementById('darkModeBtn');
-    if (getStorage('darkMode') === 'true') {
-      document.body.classList.add('dark-mode');
-      darkModeBtn.textContent = '☀️ Light Mode';
-    }
-    darkModeBtn.addEventListener('click', function() {
+    // Nav toggles
+    document.getElementById('goToRegister').addEventListener('click', () => showPage('registerPage'));
+    document.getElementById('goToLogin').addEventListener('click', () => showPage('loginPage'));
+    document.getElementById('menuBtn').addEventListener('click', openSidebar);
+    document.getElementById('closeBtn').addEventListener('click', closeSidebar);
+    document.getElementById('overlay').addEventListener('click', closeSidebar);
+    document.getElementById('subscriptionPageBtn').addEventListener('click', () => showSection('subscription'));
+    document.getElementById('payPremiumBtn').addEventListener('click', activatePremium);
+    document.getElementById('goSubFromAi').addEventListener('click', () => showSection('subscription'));
+    document.getElementById('goSubFromNotes').addEventListener('click', () => showSection('subscription'));
+    document.getElementById('goSubFromFriends').addEventListener('click', () => showSection('subscription'));
+
+    document.querySelectorAll('.nav-links li').forEach(li => {
+      li.addEventListener('click', () => showSection(li.dataset.target));
+    });
+
+    // Dark Mode
+    document.getElementById('darkModeBtn').addEventListener('click', () => {
       document.body.classList.toggle('dark-mode');
       const isDark = document.body.classList.contains('dark-mode');
-      this.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
-      setStorage('darkMode', isDark);
+      setStorage('darkMode', isDark ? 'on' : 'off');
     });
+    if (getStorage('darkMode') === 'on') document.body.classList.add('dark-mode');
 
-    const schedForm = document.getElementById('schedFormBox');
-    document.getElementById('showSchedFormBtn').onclick = () => schedForm.classList.add('show');
-    document.getElementById('hideSchedFormBtn').onclick = () => {
-      schedForm.classList.remove('show');
-      ['schedSubject','schedDay','schedStart','schedEnd'].forEach(id=>document.getElementById(id).value='');
-    };
-    document.getElementById('addSchedBtn').onclick = () => {
+    // ============= SCHEDULE =============
+    document.getElementById('showSchedFormBtn').addEventListener('click', () => {
+      document.getElementById('schedFormBox').classList.add('show');
+    });
+    document.getElementById('hideSchedFormBtn').addEventListener('click', () => {
+      document.getElementById('schedFormBox').classList.remove('show');
+    });
+    document.getElementById('addSchedBtn').addEventListener('click', () => {
       const subject = document.getElementById('schedSubject').value.trim();
       const day = document.getElementById('schedDay').value;
       const start = document.getElementById('schedStart').value;
       const end = document.getElementById('schedEnd').value;
-      if (!subject || !day || !start || !end) return alert('Please fill in all fields!');
-      const data = getData('schedule');
-      data.push({ subject, day, start, end });
-      saveData('schedule', data);
-      schedForm.classList.remove('show');
-      ['schedSubject','schedDay','schedStart','schedEnd'].forEach(id=>document.getElementById(id).value='');
-    };
+      if (!subject || !day || !start || !end) {
+        alert('⚠️ Fill in all fields.'); return;
+      }
+      const schedule = getData('schedule') || [];
+      schedule.push({ id: Date.now(), subject, day, start, end });
+      saveData('schedule', schedule);
+      document.getElementById('schedFormBox').classList.remove('show');
+      document.getElementById('schedSubject').value = '';
+      document.getElementById('schedDay').value = '';
+      document.getElementById('schedStart').value = '';
+      document.getElementById('schedEnd').value = '';
+    });
+
     function renderSchedule() {
       const list = document.getElementById('scheduleList');
       const data = getData('schedule');
-      list.innerHTML = data.length === 0
-        ? '<li class="empty-msg">📅 No schedule added yet.</li>'
-        : data.map((item, i) => `
-          <li style="animation-delay: ${i * 60}ms">
-            <div><strong>${item.subject}</strong><br>${item.day} — ${item.start} to ${item.end}</div>
-            <button class="delete-btn" data-key="schedule" data-idx="${i}">Delete</button>
-          </li>`).join('');
+      list.innerHTML = '';
+      if (!data.length) { list.innerHTML = `<li class="empty-msg">No schedules added yet.</li>`; return; }
+      data.forEach(item => {
+        list.innerHTML += `<li>
+          <div><strong>${item.subject}</strong><br>${item.day} • ${item.start} – ${item.end}</div>
+          <button class="action-btn delete-btn" data-id="${item.id}">Delete</button>
+        </li>`;
+      });
+      list.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          let sched = getData('schedule');
+          sched = sched.filter(s => s.id !== parseInt(btn.dataset.id));
+          saveData('schedule', sched);
+        });
+      });
     }
 
-    const assignForm = document.getElementById('assignFormBox');
-    document.getElementById('showAssignFormBtn').onclick = () => assignForm.classList.add('show');
-    document.getElementById('hideAssignFormBtn').onclick = () => {
-      assignForm.classList.remove('show');
-      ['assignTitle','assignDesc','assignDue'].forEach(id=>document.getElementById(id).value='');
-    };
-    document.getElementById('addAssignBtn').onclick = () => {
+    // ============= ASSIGNMENTS =============
+    document.getElementById('showAssignFormBtn').addEventListener('click', () => {
+      document.getElementById('assignFormBox').classList.add('show');
+    });
+    document.getElementById('hideAssignFormBtn').addEventListener('click', () => {
+      document.getElementById('assignFormBox').classList.remove('show');
+    });
+    document.getElementById('addAssignBtn').addEventListener('click', () => {
       const title = document.getElementById('assignTitle').value.trim();
       const desc = document.getElementById('assignDesc').value.trim();
       const due = document.getElementById('assignDue').value;
-      if (!title || !due) return alert('Please fill in Title and Due Date!');
-      const data = getData('assignments');
-      data.push({ title, desc, due });
-      saveData('assignments', data);
-      assignForm.classList.remove('show');
-      ['assignTitle','assignDesc','assignDue'].forEach(id=>document.getElementById(id).value='');
-    };
+      if (!title || !due) { alert('⚠️ Fill in all fields.'); return; }
+      const assign = getData('assignments') || [];
+      assign.push({ id: Date.now(), title, desc, due, status: 'Pending' });
+      saveData('assignments', assign);
+      document.getElementById('assignFormBox').classList.remove('show');
+      document.getElementById('assignTitle').value = '';
+      document.getElementById('assignDesc').value = '';
+      document.getElementById('assignDue').value = '';
+    });
+
     function renderAssignments() {
       const list = document.getElementById('assignList');
       const data = getData('assignments');
-      list.innerHTML = data.length === 0
-        ? '<li class="empty-msg">📝 No assignments added yet.</li>'
-        : data.map((item, i) => `
-          <li style="animation-delay: ${i * 60}ms">
-            <div><strong>${item.title}</strong>${item.desc ? '<br>'+item.desc : ''}<br>📅 Due: ${item.due}</div>
-            <button class="delete-btn" data-key="assignments" data-idx="${i}">Delete</button>
-          </li>`).join('');
+      list.innerHTML = '';
+      if (!data.length) { list.innerHTML = `<li class="empty-msg">No assignments yet.</li>`; return; }
+      data.forEach(item => {
+        const isDone = item.status === 'Completed';
+        list.innerHTML += `<li>
+          <div style="${isDone?'text-decoration:line-through;opacity:0.6':''}">
+            <strong>${item.title}</strong><br>
+            ${item.desc?item.desc+'<br>':''}
+            📅 Due: ${item.due} • <span style="color:${isDone?'var(--success)':'var(--warning)'}">${item.status}</span>
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            ${!isDone?`<button class="action-btn edit-btn mark-done" data-id="${item.id}">✓ Mark Done</button>`:''}
+            <button class="action-btn delete-btn del-assign" data-id="${item.id}">Delete</button>
+          </div>
+        </li>`;
+      });
+      list.querySelectorAll('.mark-done').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const assigns = getData('assignments');
+          const idx = assigns.findIndex(a => a.id === parseInt(btn.dataset.id));
+          if (idx > -1) { assigns[idx].status = 'Completed'; saveData('assignments', assigns); }
+        });
+      });
+      list.querySelectorAll('.del-assign').forEach(btn => {
+        btn.addEventListener('click', () => {
+          let assigns = getData('assignments');
+          assigns = assigns.filter(a => a.id !== parseInt(btn.dataset.id));
+          saveData('assignments', assigns);
+        });
+      });
     }
 
-    const projForm = document.getElementById('projFormBox');
-    document.getElementById('showProjFormBtn').onclick = () => projForm.classList.add('show');
-    document.getElementById('hideProjFormBtn').onclick = () => {
-      projForm.classList.remove('show');
-      ['projName','projMembers','projDeadline'].forEach(id=>document.getElementById(id).value='');
-    };
-    document.getElementById('addProjBtn').onclick = () => {
+    // ============= PROJECTS =============
+    document.getElementById('showProjFormBtn').addEventListener('click', () => {
+      document.getElementById('projFormBox').classList.add('show');
+    });
+    document.getElementById('hideProjFormBtn').addEventListener('click', () => {
+      document.getElementById('projFormBox').classList.remove('show');
+    });
+    document.getElementById('addProjBtn').addEventListener('click', () => {
       const name = document.getElementById('projName').value.trim();
       const members = document.getElementById('projMembers').value.trim();
       const deadline = document.getElementById('projDeadline').value;
-      if (!name || !deadline) return alert('Please fill in Project Name and Deadline!');
-      const data = getData('projects');
-      data.push({ name, members, deadline });
-      saveData('projects', data);
-      projForm.classList.remove('show');
-      ['projName','projMembers','projDeadline'].forEach(id=>document.getElementById(id).value='');
-    };
+      if (!name || !deadline) { alert('⚠️ Fill in all fields.'); return; }
+      const projects = getData('projects') || [];
+      projects.push({ id: Date.now(), name, members, deadline });
+      saveData('projects', projects);
+      document.getElementById('projFormBox').classList.remove('show');
+      document.getElementById('projName').value = '';
+      document.getElementById('projMembers').value = '';
+      document.getElementById('projDeadline').value = '';
+    });
+
     function renderProjects() {
       const list = document.getElementById('projList');
       const data = getData('projects');
-      list.innerHTML = data.length === 0
-        ? '<li class="empty-msg">📊 No projects added yet.</li>'
-        : data.map((item, i) => `
-          <li style="animation-delay: ${i * 60}ms">
-            <div><strong>${item.name}</strong>${item.members ? '<br>👥 '+item.members : ''}<br>📅 Deadline: ${item.deadline}</div>
-            <button class="delete-btn" data-key="projects" data-idx="${i}">Delete</button>
-          </li>`).join('');
+      list.innerHTML = '';
+      if (!data.length) { list.innerHTML = `<li class="empty-msg">No projects added yet.</li>`; return; }
+      data.forEach(item => {
+        list.innerHTML += `<li>
+          <div>
+            <strong>${item.name}</strong><br>
+            ${item.members?`👥 Members: ${item.members}<br>`:''}
+            📅 Deadline: ${item.deadline}
+          </div>
+          <button class="action-btn delete-btn del-proj" data-id="${item.id}">Delete</button>
+        </li>`;
+      });
+      list.querySelectorAll('.del-proj').forEach(btn => {
+        btn.addEventListener('click', () => {
+          let projs = getData('projects');
+          projs = projs.filter(p => p.id !== parseInt(btn.dataset.id));
+          saveData('projects', projs);
+        });
+      });
     }
 
-    document.addEventListener('click', e => {
-      if (e.target.classList.contains('delete-btn')) {
-        const key = e.target.dataset.key;
-        const idx = parseInt(e.target.dataset.idx);
-        const data = getData(key);
-        data.splice(idx, 1);
-        saveData(key, data);
+    // ============= AI ASSISTANT =============
+    document.getElementById('ai-send').addEventListener('click', sendAiMessage);
+    document.getElementById('ai-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendAiMessage();
+    });
+    function sendAiMessage() {
+      const input = document.getElementById('ai-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+      const chatBox = document.getElementById('chat-box');
+      chatBox.innerHTML += `<div class="message user-msg">${msg}</div>`;
+      input.value = '';
+      chatBox.innerHTML += `<div class="message ai-msg typing">StudyMate AI is thinking...</div>`;
+      chatBox.scrollTop = chatBox.scrollHeight;
+      setTimeout(() => {
+        const replies = [
+          "Great question! Let's break it down simply.",
+          "I can help you understand that topic. Here's a clear explanation...",
+          "That's an important concept. Basically, it means:",
+          "Here's a study tip: Take notes in your own words — it helps memory!",
+          "You're doing great! Keep consistent review every day for best results."
+        ];
+        const reply = replies[Math.floor(Math.random() * replies.length)];
+        const aiMsg = chatBox.querySelector('.typing');
+        if (aiMsg) {
+          aiMsg.outerHTML = `<div class="message ai-msg"><strong>StudyMate AI:</strong> ${reply}<br><br>Would you like more details or examples about this topic?</div>`;
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }, 1200);
+    }
+
+    // ============= NOTES =============
+    let activeFilter = 'all';
+    let reviewNotes = [];
+    let reviewIndex = 0;
+
+    document.getElementById('showNoteFormBtn').addEventListener('click', () => {
+      document.getElementById('noteFormBox').classList.add('show');
+      document.getElementById('noteFormTitle').textContent = 'Create New Note';
+      document.getElementById('editNoteId').value = '';
+      document.getElementById('noteTitle').value = '';
+      document.getElementById('noteType').value = 'note';
+      document.getElementById('noteSubject').value = '';
+      document.getElementById('noteContent').value = '';
+    });
+    document.getElementById('hideNoteFormBtn').addEventListener('click', () => {
+      document.getElementById('noteFormBox').classList.remove('show');
+    });
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.filter;
+        renderNotes();
+      });
+    });
+    document.getElementById('saveNoteBtn').addEventListener('click', () => {
+      const title = document.getElementById('noteTitle').value.trim();
+      const type = document.getElementById('noteType').value;
+      const subject = document.getElementById('noteSubject').value.trim();
+      const content = document.getElementById('noteContent').value.trim();
+      const editId = document.getElementById('editNoteId').value;
+      if (!title || !content) { alert('⚠️ Title and content are required.'); return; }
+      let notes = getData('notes');
+      if (editId) {
+        const idx = notes.findIndex(n => n.id === parseInt(editId));
+        if (idx > -1) {
+          notes[idx] = { ...notes[idx], title, type, subject, content, updatedAt: new Date().toISOString() };
+        }
+      } else {
+        notes.unshift({ id: Date.now(), title, type, subject, content, createdAt: new Date().toISOString() });
       }
+      saveData('notes', notes);
+      document.getElementById('noteFormBox').classList.remove('show');
+    });
+    document.getElementById('noteSearch').addEventListener('input', renderNotes);
+
+    function renderNotes() {
+      const list = document.getElementById('notesList');
+      let notes = getData('notes');
+      const search = document.getElementById('noteSearch').value.toLowerCase();
+      // Filter
+      if (activeFilter !== 'all') notes = notes.filter(n => n.type === activeFilter);
+      if (search) notes = notes.filter(n =>
+        n.title.toLowerCase().includes(search) ||
+        (n.subject && n.subject.toLowerCase().includes(search)) ||
+        n.content.toLowerCase().includes(search)
+      );
+      list.innerHTML = '';
+      if (!notes.length) { list.innerHTML = `<li class="empty-msg">No notes found.</li>`; return; }
+      notes.forEach(item => {
+        list.innerHTML += `<li>
+          <div>
+            <div class="note-header">
+              <strong>${item.title}</strong>
+              <span class="tag">${item.type}</span>
+            </div>
+            ${item.subject?`<span class="note-meta">📚 ${item.subject}</span>`:''}
+            <div class="note-content">${item.content.substring(0,100)}${item.content.length>100?'...':''}</div>
+            <div class="note-meta">${new Date(item.createdAt).toLocaleString()}</div>
+            <div class="note-actions">
+              <button class="action-btn edit-btn edit-note" data-id="${item.id}">Edit</button>
+              ${item.type==='reviewer'||item.type==='flashcard'?`<button class="action-btn review-btn start-review" data-id="${item.id}">Review</button>`:''}
+              <button class="action-btn delete-btn del-note" data-id="${item.id}">Delete</button>
+            </div>
+          </div>
+        </li>`;
+      });
+      list.querySelectorAll('.edit-note').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const note = getData('notes').find(n => n.id === parseInt(btn.dataset.id));
+          if (!note) return;
+          document.getElementById('editNoteId').value = note.id;
+          document.getElementById('noteTitle').value = note.title;
+          document.getElementById('noteType').value = note.type;
+          document.getElementById('noteSubject').value = note.subject||'';
+          document.getElementById('noteContent').value = note.content;
+          document.getElementById('noteFormTitle').textContent = 'Edit Note';
+          document.getElementById('noteFormBox').classList.add('show');
+          document.getElementById('notesListContainer').classList.add('hidden');
+          setTimeout(()=>document.getElementById('notesListContainer').classList.remove('hidden'), 10);
+        });
+      });
+      list.querySelectorAll('.del-note').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!confirm('Delete this note?')) return;
+          let notes = getData('notes');
+          notes = notes.filter(n => n.id !== parseInt(btn.dataset.id));
+          saveData('notes', notes);
+        });
+      });
+      list.querySelectorAll('.start-review').forEach(btn => {
+        btn.addEventListener('click', () => {
+          reviewNotes = getData('notes').filter(n => n.type==='reviewer'||n.type==='flashcard');
+          if (!reviewNotes.length) { alert('No reviewers available.'); return; }
+          reviewIndex = 0;
+          document.getElementById('notesListContainer').classList.add('hidden');
+          document.getElementById('reviewModeContainer').classList.remove('hidden');
+          showReviewCard();
+        });
+      });
+    }
+
+    function showReviewCard() {
+      const note = reviewNotes[reviewIndex];
+      let q = note.content, a = '';
+      if (note.content.includes('Q:') && note.content.includes('A:')) {
+        const matchQ = note.content.match(/Q:\s*(.*?)(?=\nA:)/s);
+        const matchA = note.content.match(/A:\s*(.*)$/s);
+        if (matchQ) q = matchQ[1].trim();
+        if (matchA) a = matchA[1].trim();
+      }
+      document.getElementById('reviewQuestion').textContent = q;
+      document.getElementById('reviewAnswer').textContent = a || 'Answer not specified.';
+      document.getElementById('reviewCard').classList.remove('show-answer');
+      document.getElementById('reviewCounter').textContent = `${reviewIndex+1} / ${reviewNotes.length}`;
+    }
+    document.getElementById('reviewCard').addEventListener('click', () => {
+      document.getElementById('reviewCard').classList.toggle('show-answer');
+    });
+    document.getElementById('nextReviewBtn').addEventListener('click', () => {
+      reviewIndex = (reviewIndex+1) % reviewNotes.length;
+      showReviewCard();
+    });
+    document.getElementById('exitReviewBtn').addEventListener('click', () => {
+      document.getElementById('reviewModeContainer').classList.add('hidden');
+      document.getElementById('notesListContainer').classList.remove('hidden');
     });
 
+    // ============= FRIENDS (placeholder structure) =============
+    function renderFriends() {
+      document.getElementById('friendRequestsList').innerHTML = `<li class="empty-msg">Friend requests appear here.</li>`;
+      document.getElementById('friendsList').innerHTML = `<li class="empty-msg">Search for users to add friends.</li>`;
+    }
+
+    // ============= RENDER ALL =============
     function renderAll() {
       renderSchedule();
       renderAssignments();
       renderProjects();
+      renderNotes();
+      renderFriends();
     }
 
-    // ===== START =====
-    checkSession();
+    // ============= INITIAL CHECK =============
+    window.addEventListener('load', () => {
+      const savedUser = getStorage('currentUser');
+      if (savedUser) {
+        try {
+          const u = JSON.parse(savedUser);
+          currentUserData = u;
+          document.getElementById('userInfoDisplay').innerHTML = `<strong>${u.fullname}</strong><br><small>${u.email}</small>`;
+          updateSubscriptionUI();
+          showPage('mainApp');
+          showSection('schedule');
+        } catch {}
+      }
+    });
   </script>
 </body>
 </html>
