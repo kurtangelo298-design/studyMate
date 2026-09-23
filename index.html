@@ -1126,7 +1126,7 @@
               3. Enter number: <strong style="color:var(--primary);">09704564765</strong><br>
               4. Enter amount: <strong>₱50.00</strong><br>
               5. Confirm and send the payment<br>
-              6. Click the button below after paying
+              6. Premium will be activated shortly
             </p>
 
             <!-- GCash Link with target="_blank" -->
@@ -1138,12 +1138,9 @@
               </button>
             </a>
 
-            <!-- ✅ FIXED: Added payPremiumBtn that JS is looking for -->
-          
-
             <p class="payment-note">
-              ⚠️ Manual activation only. Payment confirmation may take a few minutes. 
-              No auto-renewal. No refunds after confirmed payment.
+              ⚠️ Manual activation only. Pagkatapos magbayad, ang Premium ay awtomatikong maa-activate sa loob ng ilang minuto. 
+              Kung hindi pa rin activated pagkalipas ng 1 oras, maghintay lamang o i-refresh ang page.
             </p>
           </div>
         </div>
@@ -1571,29 +1568,6 @@
       // Privacy Policy is ALWAYS visible
     }
 
-    function activatePremium() {
-      const currentUser = getStorage('currentUser');
-      if (!currentUser) {
-        alert('⚠️ Please log in first!');
-        return;
-      }
-      try {
-        const user = JSON.parse(currentUser);
-        const users = getData('studyMateUsers');
-        const idx = users.findIndex(u => u.email === user.email);
-        if (idx > -1) {
-          users[idx].isPremium = true;
-          setStorage('studyMateUsers', JSON.stringify(users));
-          updateSubscriptionUI();
-          alert('✅ Premium Activated! Thank you! All features are now unlocked!');
-          showSection('schedule');
-        }
-      } catch (e) {
-        console.error('Premium activation error:', e);
-        alert('❌ Error activating Premium. Please try again.');
-      }
-    }
-
     // ============= PAGE NAVIGATION =============
     function showPage(pageId) {
       document.getElementById('loginPage').classList.add('hidden');
@@ -1757,7 +1731,6 @@
     document.getElementById('closeBtn').addEventListener('click', closeSidebar);
     document.getElementById('overlay').addEventListener('click', closeSidebar);
     document.getElementById('subscriptionPageBtn').addEventListener('click', () => showSection('subscription'));
-    document.getElementById('payPremiumBtn').addEventListener('click', activatePremium);
     document.getElementById('goSubFromAi').addEventListener('click', () => showSection('subscription'));
     document.getElementById('goSubFromNotes').addEventListener('click', () => showSection('subscription'));
     document.getElementById('goSubFromFriends').addEventListener('click', () => showSection('subscription'));
