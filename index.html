@@ -129,7 +129,6 @@
       transition: all 0.3s ease;
       position: relative;
       z-index: 10;
-      pointer-events: auto !important;
     }
     .auth-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
     .toggle-auth {
@@ -142,7 +141,6 @@
       color: var(--primary);
       font-weight: 600;
       cursor: pointer;
-      pointer-events: auto !important;
     }
     .toggle-auth span:hover { text-decoration: underline; }
     .form-label {
@@ -166,7 +164,6 @@
       z-index: 500;
       box-shadow: var(--shadow-md);
       transition: all 0.3s ease;
-      pointer-events: auto !important;
     }
     .menu-toggle:hover { transform: scale(1.08); }
     .overlay {
@@ -178,9 +175,8 @@
       visibility: hidden;
       transition: all 0.3s ease;
       z-index: 150;
-      pointer-events: none;
     }
-    .overlay.show { opacity: 1; visibility: visible; pointer-events: auto; }
+    .overlay.show { opacity: 1; visibility: visible; }
     .sidebar {
       position: fixed;
       top: 0;
@@ -195,7 +191,6 @@
       z-index: 300;
       padding: 1.5rem;
       overflow-y: auto;
-      pointer-events: auto !important;
     }
     body.dark-mode .sidebar { background: rgba(30, 41, 59, 0.95); }
     .sidebar.open { transform: translateX(0); }
@@ -224,7 +219,6 @@
       font-size: 1.3rem;
       cursor: pointer;
       transition: all 0.25s ease;
-      pointer-events: auto !important;
     }
     .close-btn:hover { background: var(--danger); color: white; transform: rotate(90deg); }
     .nav-links { list-style: none; }
@@ -235,7 +229,6 @@
       cursor: pointer;
       transition: all 0.3s ease;
       font-weight: 500;
-      pointer-events: auto !important;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -248,14 +241,6 @@
     .lock-icon {
       font-size: 0.8rem;
       color: var(--text-soft);
-    }
-    .premium-badge {
-      background: linear-gradient(135deg, #f59e0b, #eab308);
-      color: white;
-      font-size: 0.65rem;
-      padding: 0.15rem 0.5rem;
-      border-radius: 50px;
-      font-weight: 700;
     }
     .subscription-status {
       margin: 1rem 0;
@@ -287,7 +272,6 @@
       border-radius: var(--radius-md);
       cursor: pointer;
       font-weight: 600;
-      pointer-events: auto !important;
       margin-bottom: 0.5rem;
     }
     .upgrade-btn {
@@ -329,6 +313,7 @@
       font-weight: 700;
     }
     h2 { font-size: 1.2rem; margin-bottom: 1rem; color: var(--text); }
+    h3 { font-size: 1.1rem; margin-bottom: 0.75rem; color: var(--text); }
     .add-btn-container {
       text-align: center;
       margin-bottom: 2rem;
@@ -344,7 +329,6 @@
       cursor: pointer;
       box-shadow: var(--shadow-md);
       transition: all 0.3s ease;
-      pointer-events: auto !important;
     }
     .add-toggle-btn:hover { transform: translateY(-3px); }
     .form-box {
@@ -370,7 +354,6 @@
       font-size: 0.95rem;
       outline: none;
       transition: all 0.3s ease;
-      pointer-events: auto;
     }
     .form-box textarea { min-height: 120px; resize: vertical; }
     .form-box input:focus, .form-box select:focus, .form-box textarea:focus {
@@ -381,7 +364,7 @@
     .btn-group button {
       flex: 1; padding: 0.95rem; border: none; border-radius: var(--radius-sm);
       font-weight: 600; cursor: pointer; transition: all 0.3s ease;
-      pointer-events: auto !important; min-width: 100px;
+      min-width: 100px;
     }
     .save-btn { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; }
     .cancel-btn { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
@@ -418,7 +401,7 @@
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-md);
     }
-    .locked-section .lock-icon-big {
+    .lock-icon-big {
       font-size: 3rem;
       color: var(--text-soft);
       margin-bottom: 1rem;
@@ -454,14 +437,6 @@
       transition: all 0.3s ease; pointer-events: none;
     }
     .offline-status.show { opacity: 1; transform: translateY(0); }
-    .user-info {
-      padding: 0.75rem;
-      background: var(--primary-soft);
-      border-radius: var(--radius-sm);
-      margin-bottom: 0.5rem;
-      font-size: 0.9rem;
-    }
-    /* Subscription Page */
     .subscription-container {
       text-align: center;
       padding: 2rem;
@@ -496,14 +471,10 @@
     .feature-list li {
       padding: 0.5rem 0;
       border-bottom: 1px solid var(--border);
+      list-style: none;
     }
-    .feature-list li.included {
-      color: var(--success);
-    }
-    .feature-list li.excluded {
-      color: var(--text-soft);
-      text-decoration: line-through;
-    }
+    .included { color: var(--success); }
+    .excluded { color: var(--text-soft); text-decoration: line-through; }
     .payment-note {
       margin-top: 1.5rem;
       font-size: 0.85rem;
@@ -563,7 +534,6 @@
       background: transparent;
       color: var(--text);
       transition: all 0.3s ease;
-      pointer-events: auto;
     }
     #ai-input:focus {
       border-color: var(--primary);
@@ -579,7 +549,6 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      pointer-events: auto !important;
     }
     .ai-send-btn:hover { transform: scale(1.05); }
     .search-bar {
@@ -638,7 +607,6 @@
       font-size: 0.85rem;
       font-weight: 600;
       transition: all 0.25s ease;
-      pointer-events: auto !important;
     }
     .edit-btn { background: var(--warning); color: white; }
     .review-btn { background: var(--success); color: white; }
@@ -669,13 +637,13 @@
       transition: all 0.3s ease;
     }
     .review-card:hover { transform: scale(1.02); }
-    .review-card .question {
+    .question {
       font-size: 1.25rem;
       font-weight: 600;
       margin-bottom: 1rem;
       color: var(--primary);
     }
-    .review-card .answer {
+    .answer {
       font-size: 1rem;
       line-height: 1.6;
       color: var(--text);
@@ -703,19 +671,328 @@
       cursor: pointer;
       transition: all 0.3s ease;
     }
+    /* Privacy Policy Styles */
+    .privacy-content {
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .privacy-content h3 {
+      color: var(--primary);
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .privacy-content p {
+      margin-bottom: 0.75rem;
+    }
+    .privacy-content ul {
+      margin: 0.5rem 0 1rem 1.5rem;
+    }
+    .privacy-content ul li {
+      margin-bottom: 0.35rem;
+    }
+    .privacy-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    .privacy-table th, .privacy-table td {
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .privacy-table th {
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .privacy-table td.center {
+      text-align: center;
+    }
+    .privacy-footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .privacy-checkbox {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    .privacy-checkbox input {
+      margin-top: 0.25rem;
+      width: auto !important;
+    }
+    .privacy-link {
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    /* PRIVACY MODAL (for login/register view) */
+    .privacy-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    .privacy-modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    .privacy-modal {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modalFadeUp 0.3s ease;
+    }
+    @keyframes modalFadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .privacy-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, var(--primary-soft), transparent);
+    }
+    .privacy-modal-header h2 {
+      margin: 0;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+    .privacy-modal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .privacy-modal-close:hover {
+      background: var(--danger);
+      color: white;
+      transform: rotate(90deg);
+    }
+    .privacy-modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .privacy-modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .privacy-modal-footer button {
+      padding: 0.75rem 2rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+    .privacy-modal-footer button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
   </style>
 </head>
 <body>
+  <!-- PRIVACY POLICY MODAL (for login/register) -->
+  <div class="privacy-modal-overlay" id="privacyModal">
+    <div class="privacy-modal">
+      <div class="privacy-modal-header">
+        <h2>🔒 Privacy and Account Protection Policy</h2>
+        <button class="privacy-modal-close" id="closePrivacyModal">×</button>
+      </div>
+      <div class="privacy-modal-body privacy-content">
+        <p style="text-align:center; color:var(--text-soft); margin-bottom:1.5rem;">
+          <strong>StudyMate PH</strong><br>
+          Last Updated: September 23, 2026
+        </p>
+        <h3>1. INTRODUCTION</h3>
+        <p>StudyMate PH is an all-in-one academic productivity application designed to assist students in organizing their class schedules, assignments, project deadlines, and study materials in a single, accessible platform. We are committed to protecting the privacy, personal information, and account security of every user. This policy outlines what information we collect, how we use and safeguard it, and your rights as a user.</p>
+        <h3>2. INFORMATION COLLECTED</h3>
+        <p>We adhere to a minimal data collection principle. We only request information that is strictly necessary to create and maintain your account:</p>
+        <table class="privacy-table">
+          <thead>
+            <tr>
+              <th>Information</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Full Name</strong></td>
+              <td>To identify you within the application and personalize your experience</td>
+            </tr>
+            <tr>
+              <td><strong>Username</strong></td>
+              <td>To serve as your unique identifier for secure account access</td>
+            </tr>
+            <tr>
+              <td><strong>Password</strong></td>
+              <td>To authenticate and protect your account from unauthorized access</td>
+            </tr>
+            <tr>
+              <td><strong>Security Question & Answer</strong></td>
+              <td>To verify your identity and facilitate account recovery if you forget your password</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>We do not collect location data, contact lists, device identifiers, photographs, or any additional personal information without your explicit consent.</p>
+        <h3>3. DATA PROTECTION AND USAGE</h3>
+        <ul>
+          <li>Your information is used solely to provide, maintain, and improve the services offered by StudyMate PH</li>
+          <li>Your password is protected and never visible to any party, including the developers</li>
+          <li>Your security answer is stored privately and used only by you for account recovery</li>
+          <li>We do not sell, trade, rent, or share your personal information with third parties</li>
+          <li>We do not use your data for advertising profiling, marketing, or any purpose unrelated to the operation of the application</li>
+          <li>Your schedules, tasks, notes, and preferences are stored locally on your device and remain under your control</li>
+        </ul>
+        <h3>4. ACCOUNT SECURITY</h3>
+        <ul>
+          <li>You are responsible for maintaining the confidentiality of your login credentials</li>
+          <li>You may update your account information or change your password at any time</li>
+          <li>You may delete your account and all associated data permanently whenever you wish</li>
+          <li>If you change devices or clear your browser data, locally stored information may not be transferred — we recommend maintaining personal backups of important records</li>
+        </ul>
+        <h3>5. SERVICE PLANS AND FEATURES</h3>
+        <table class="privacy-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th class="center">Free Plan</th>
+              <th class="center">Premium — ₱50/mo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Class Schedule Management</td>
+              <td class="center">✅ Included</td>
+              <td class="center">✅ Included</td>
+            </tr>
+            <tr>
+              <td>Assignments & Deadline Tracking</td>
+              <td class="center">✅ Included</td>
+              <td class="center">✅ Included</td>
+            </tr>
+            <tr>
+              <td>Group Project Tracker</td>
+              <td class="center">✅ Included</td>
+              <td class="center">✅ Included</td>
+            </tr>
+            <tr>
+              <td>AI Study Assistant</td>
+              <td class="center">❌ Not included</td>
+              <td class="center">✅ Included</td>
+            </tr>
+            <tr>
+              <td>Digital Notes & Reviewer</td>
+              <td class="center">❌ Not included</td>
+              <td class="center">✅ Included</td>
+            </tr>
+            <tr>
+              <td>Friends System</td>
+              <td class="center">❌ Not included</td>
+              <td class="center">✅ Included</td>
+            </tr>
+            <tr>
+              <td>Advertisements</td>
+              <td class="center">None</td>
+              <td class="center">None</td>
+            </tr>
+            <tr>
+              <td><strong>Privacy Protection</strong></td>
+              <td class="center">✅ Equal Standards</td>
+              <td class="center">✅ Equal Standards</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>All users receive the same level of privacy and data protection regardless of plan.</p>
+        <h3>6. SUBSCRIPTION AND PAYMENT TERMS</h3>
+        <ul>
+          <li>Premium subscription rate: ₱50.00 Philippine Pesos per calendar month</li>
+          <li>Payment is processed manually via GCash to our official account: <strong>09704564765</strong></li>
+          <li>There is no automatic renewal or recurring billing — you initiate each payment</li>
+          <li>Premium access is valid for thirty (30) days from the date of confirmed payment</li>
+          <li>No refunds will be issued once payment has been sent. Please verify details before proceeding</li>
+          <li>Upon expiration, Premium-only features will be restricted. You may renew at any time</li>
+        </ul>
+        <h3>7. YOUR RIGHTS</h3>
+        <p>As a user, you have the right to:</p>
+        <ul>
+          <li>Access the personal information associated with your account</li>
+          <li>Request correction of inaccurate or updated information</li>
+          <li>Request permanent deletion of your account and all stored data</li>
+          <li>Discontinue use of the application at any time</li>
+          <li>Recover account access using your security credentials</li>
+        </ul>
+        <h3>8. POLICY UPDATES</h3>
+        <p>We may revise this Privacy Policy as necessary to reflect changes in features, legal requirements, or operational practices. Continued use of StudyMate PH following the posting of updated terms constitutes your acceptance of those changes.</p>
+        <h3>9. ACCEPTANCE</h3>
+        <p>By creating an account and accessing StudyMate PH, you acknowledge that you have read, understood, and agreed to the terms stated in this Privacy and Account Protection Policy. If you do not agree with these terms, please do not create an account or use this application.</p>
+        <h3>10. CONTACT INFORMATION</h3>
+        <p>For inquiries regarding this policy, account concerns, or subscription matters:</p>
+        <p style="margin-top:0.5rem;">📱 <strong>GCash:</strong> 09704564765</p>
+        <div class="privacy-footer">
+          StudyMate PH — All-in-One Academic Productivity.<br>
+          Privacy-First. Student-Focused.
+        </div>
+      </div>
+      <div class="privacy-modal-footer">
+        <button id="agreePrivacyBtn">✅ I Understand and Agree</button>
+      </div>
+    </div>
+  </div>
+
   <!-- LOGIN FORM -->
   <div class="auth-container" id="loginPage">
     <div class="auth-box">
       <h2>Log In — StudyMate PH</h2>
       <p class="desc">Enter your details to access your account</p>
-      <input type="text" id="loginUser" placeholder="Enter your email or username" required autocomplete="username">
+      <input type="text" id="loginUser" placeholder="Enter your username" required autocomplete="username">
       <input type="password" id="loginPass" placeholder="Enter your password" required autocomplete="current-password">
       <button class="auth-btn" id="loginBtn">Log In</button>
       <div class="toggle-auth">
+        <span id="goToForgotPass" style="color: var(--primary); cursor: pointer; font-weight: 500;">Forgot Password?</span>
+        <br><br>
         Don't have an account? <span id="goToRegister">Register here</span>
+        <br><br>
+        <span class="privacy-link" id="viewPrivacyLogin">View Privacy Policy</span>
       </div>
     </div>
   </div>
@@ -727,20 +1004,12 @@
       <p class="desc">Fill in all information to get started</p>
       <label class="form-label">Full Name:</label>
       <input type="text" id="regFullname" placeholder="Enter your full name" required>
-      <label class="form-label">Birthday</label>
-      <input type="date" id="regBirthday" required>
-      <label class="form-label">Age:</label>
-      <input type="text" id="regAge" placeholder="Will be calculated automatically" readonly>
-      <label class="form-label">Email / Username</label>
-      <input type="text" id="regEmail" placeholder="Enter your email or username" required>
-      <label class="form-label">Password</label>
+      <label class="form-label">Username:</label>
+      <input type="text" id="regEmail" placeholder="Create your username" required>
+      <label class="form-label">Password:</label>
       <input type="password" id="regPass" placeholder="Create a strong password" required autocomplete="new-password">
       <label class="form-label">Confirm Password:</label>
       <input type="password" id="regConfirmPass" placeholder="Re-enter your password" required autocomplete="new-password">
-      <label class="form-label">Contact Number:</label>
-      <input type="tel" id="regContact" placeholder="Enter your contact number" required>
-      <label class="form-label">Complete Address:</label>
-      <input type="text" id="regAddress" placeholder="Enter your complete address" required>
       <label class="form-label">Security Question:</label>
       <select id="regSecurityQ" required>
         <option value="">-- Select a Security Question --</option>
@@ -751,10 +1020,40 @@
         <option>What was your favorite color as a child?</option>
       </select>
       <label class="form-label">Security Answer:</label>
-      <input type="text" id="regSecurityA" placeholder="Enter your security answer" required>
+      <input type="text" id="regSecurityA" placeholder="Enter your answer" required>
+      
+      <!-- PRIVACY POLICY CHECKBOX -->
+      <label class="privacy-checkbox">
+        <input type="checkbox" id="acceptPrivacy" required>
+        I have read and agree to the
+        <span class="privacy-link" id="goToPrivacyFromRegister">Privacy Policy</span>
+      </label>
+
       <button class="auth-btn" id="registerBtn">Create Account</button>
       <div class="toggle-auth">
         Already have an account? <span id="goToLogin">Log in here</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORGOT PASSWORD FORM -->
+  <div class="auth-container hidden" id="forgotPassPage">
+    <div class="auth-box">
+      <h2>Reset Password</h2>
+      <p class="desc">Answer your security question to reset password</p>
+      <label class="form-label">Username:</label>
+      <input type="text" id="forgotUsername" placeholder="Enter your username" required>
+      <label class="form-label">Security Question:</label>
+      <input type="text" id="forgotSecQ" readonly style="background: var(--primary-soft);">
+      <label class="form-label">Your Answer:</label>
+      <input type="text" id="forgotSecA" placeholder="Enter your security answer" required>
+      <label class="form-label">New Password:</label>
+      <input type="password" id="newPass" placeholder="Enter new password (min 6 chars)" required autocomplete="new-password">
+      <label class="form-label">Confirm New Password:</label>
+      <input type="password" id="confirmNewPass" placeholder="Re-enter new password" required autocomplete="new-password">
+      <button class="auth-btn" id="resetPassBtn">Reset Password</button>
+      <div class="toggle-auth">
+        <span id="goBackToLogin">← Back to Log In</span>
       </div>
     </div>
   </div>
@@ -764,7 +1063,6 @@
     <div class="offline-status" id="offlineStatus">Ready Offline</div>
     <div class="overlay" id="overlay"></div>
     <button class="menu-toggle" id="menuBtn">☰</button>
-
     <nav class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2>StudyMate PH</h2>
@@ -790,6 +1088,7 @@
           👥 Friends & Chat
           <span class="lock-icon" id="friendsLock">🔒</span>
         </li>
+        <li data-target="privacy">🔒 Privacy Policy</li>
       </ul>
       <div class="dark-toggle">
         <button id="subscriptionPageBtn" class="upgrade-btn">⭐ Upgrade to Premium — ₱50</button>
@@ -799,36 +1098,56 @@
     </nav>
 
     <main class="content">
-            <!-- SUBSCRIPTION PAGE -->
-       <section id="subscription" class="section">
-         <h1>Upgrade to Premium</h1>
-         <div class="subscription-container">
-           <div class="subscription-card">
-             <h2>StudyMate PH Premium</h2>
-             <p>Unlock ALL features and study without limits!</p>
-             
-             <div class="price-tag">₱50 <span>one-time payment</span></div>
-             
-             <ul class="feature-list">
-               <li class="included">✅ Class Schedule</li>
-               <li class="included">✅ Assignments Tracker</li>
-               <li class="included">✅ Project Tracker</li>
-               <li class="included">✅ AI Study Assistant</li>
-               <li class="included">✅ Digital Notes & Reviewer</li>
-               <li class="included">✅ Friends & Group Chat</li>
-               <li class="included">✅ Priority Support</li>
-             </ul>
+      <!-- SUBSCRIPTION PAGE -->
+      <section id="subscription" class="section">
+        <h1>Upgrade to Premium</h1>
+        <div class="subscription-container">
+          <div class="subscription-card">
+            <h2>StudyMate PH Premium</h2>
+            <p>Unlock ALL features and study without limits!</p>
+            
+            <div class="price-tag">₱50 <span>one-time payment</span></div>
+            
+            <ul class="feature-list">
+              <li class="included">✅ Class Schedule</li>
+              <li class="included">✅ Assignments Tracker</li>
+              <li class="included">✅ Project Tracker</li>
+              <li class="included">✅ AI Study Assistant</li>
+              <li class="included">✅ Digital Notes & Reviewer</li>
+              <li class="included">✅ Friends & Group Chat</li>
+              <li class="included">✅ Priority Support</li>
+            </ul>
+            
+            <!-- GCash: Fixed link + direct payment instructions -->
+            <p style="margin: 1rem 0; color: var(--text-soft); font-size: 0.95rem; line-height: 1.6; text-align: left;">
+              <strong>📱 How to Pay via GCash:</strong><br>
+              1. Open your GCash app<br>
+              2. Tap <strong>"Send Money"</strong> → <strong>"Express Send"</strong><br>
+              3. Enter number: <strong style="color:var(--primary);">09704564765</strong><br>
+              4. Enter amount: <strong>₱50.00</strong><br>
+              5. Confirm and send the payment<br>
+              6. Click the button below after paying
+            </p>
 
-             <!-- KAPAG PININDOT → DIREKTANG GCASH -->
-             <a href="https://m.gcash.com/send?to=09301329437&amount=50" 
-                style="text-decoration: none; display: block; margin: 1rem 0;">
-               <button class="upgrade-large-btn" style="width: 100%; font-size: 1.1rem;">
-                 💳 Subscribe — ₱50 via GCash
-               </button>
-             </a>
-           </div>
-         </div>
-       </section>
+            <!-- GCash Link with target="_blank" -->
+            <a href="https://m.gcash.com/send?to=09704564765&amount=50" 
+               target="_blank" rel="noopener noreferrer"
+               style="text-decoration: none; display: block; margin: 1rem 0;">
+              <button class="upgrade-large-btn" style="width: 100%; font-size: 1.1rem;">
+                💳 Open GCash to Pay — ₱50
+              </button>
+            </a>
+
+            <!-- ✅ FIXED: Added payPremiumBtn that JS is looking for -->
+          
+
+            <p class="payment-note">
+              ⚠️ Manual activation only. Payment confirmation may take a few minutes. 
+              No auto-renewal. No refunds after confirmed payment.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <!-- SCHEDULE -->
       <section id="schedule" class="section">
@@ -901,9 +1220,9 @@
         </div>
       </section>
 
-      <!-- AI ASSISTANT (LOCKED FOR FREE) -->
+      <!-- AI ASSISTANT -->
       <section id="ai-assistant" class="section">
-        <div id="aiContentWrapper">
+        <div id="aiContentWrapper" class="hidden">
           <h1>AI Study Assistant</h1>
           <div class="ai-container">
             <div class="chat-box" id="chat-box">
@@ -917,7 +1236,7 @@
             </div>
           </div>
         </div>
-        <div id="aiLockedView" class="locked-section hidden">
+        <div id="aiLockedView" class="locked-section">
           <div class="lock-icon-big">🔒</div>
           <h2>AI Assistant is Premium Feature</h2>
           <p>Upgrade to Premium for ₱50 to unlock AI Assistant, Notes & Reviewer, and Friends & Chat!</p>
@@ -925,9 +1244,9 @@
         </div>
       </section>
 
-      <!-- NOTES & REVIEWER (LOCKED FOR FREE) -->
+      <!-- NOTES & REVIEWER -->
       <section id="notes" class="section">
-        <div id="notesContentWrapper">
+        <div id="notesContentWrapper" class="hidden">
           <h1>📝 Digital Notes & Reviewer</h1>
           <input type="text" class="search-bar" id="noteSearch" placeholder="🔍 Search your notes...">
           <div class="filter-row">
@@ -973,7 +1292,7 @@
             <ul id="notesList"></ul>
           </div>
         </div>
-        <div id="notesLockedView" class="locked-section hidden">
+        <div id="notesLockedView" class="locked-section">
           <div class="lock-icon-big">🔒</div>
           <h2>Notes & Reviewer is Premium Feature</h2>
           <p>Upgrade to Premium for ₱50 to unlock unlimited notes, reviewers, and flashcards!</p>
@@ -981,9 +1300,9 @@
         </div>
       </section>
 
-      <!-- FRIENDS & CHAT (LOCKED FOR FREE) -->
+      <!-- FRIENDS & CHAT -->
       <section id="friends" class="section">
-        <div id="friendsContentWrapper">
+        <div id="friendsContentWrapper" class="hidden">
           <h1>👥 Friends & Chat</h1>
           <p style="text-align:center; color:var(--text-soft); margin-bottom:1.5rem;">Connect with classmates, send messages, and form study groups!</p>
           <div class="list-container">
@@ -995,20 +1314,183 @@
             <ul id="friendsList" class="empty-msg">No friends yet. Search to add!</ul>
           </div>
         </div>
-        <div id="friendsLockedView" class="locked-section hidden">
+        <div id="friendsLockedView" class="locked-section">
           <div class="lock-icon-big">🔒</div>
           <h2>Friends & Chat is Premium Feature</h2>
           <p>Upgrade to Premium for ₱50 to connect with classmates and chat!</p>
           <button class="upgrade-large-btn" id="goSubFromFriends">View Premium Plans</button>
         </div>
       </section>
+
+      <!-- PRIVACY POLICY PAGE (for logged-in users) -->
+      <section id="privacy" class="section">
+        <h1>🔒 Privacy and Account Protection Policy</h1>
+        <div class="list-container privacy-content">
+          <p style="text-align:center; color:var(--text-soft); margin-bottom:1.5rem;">
+            <strong>StudyMate PH</strong><br>
+            Last Updated: September 23, 2026
+          </p>
+          <h3>1. INTRODUCTION</h3>
+          <p>StudyMate PH is an all-in-one academic productivity application designed to assist students in organizing their class schedules, assignments, project deadlines, and study materials in a single, accessible platform. We are committed to protecting the privacy, personal information, and account security of every user. This policy outlines what information we collect, how we use and safeguard it, and your rights as a user.</p>
+          <h3>2. INFORMATION COLLECTED</h3>
+          <p>We adhere to a minimal data collection principle. We only request information that is strictly necessary to create and maintain your account:</p>
+          <table class="privacy-table">
+            <thead>
+              <tr>
+                <th>Information</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Full Name</strong></td>
+                <td>To identify you within the application and personalize your experience</td>
+              </tr>
+              <tr>
+                <td><strong>Username</strong></td>
+                <td>To serve as your unique identifier for secure account access</td>
+              </tr>
+              <tr>
+                <td><strong>Password</strong></td>
+                <td>To authenticate and protect your account from unauthorized access</td>
+              </tr>
+              <tr>
+                <td><strong>Security Question & Answer</strong></td>
+                <td>To verify your identity and facilitate account recovery if you forget your password</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>We do not collect location data, contact lists, device identifiers, photographs, or any additional personal information without your explicit consent.</p>
+          <h3>3. DATA PROTECTION AND USAGE</h3>
+          <ul>
+            <li>Your information is used solely to provide, maintain, and improve the services offered by StudyMate PH</li>
+            <li>Your password is protected and never visible to any party, including the developers</li>
+            <li>Your security answer is stored privately and used only by you for account recovery</li>
+            <li>We do not sell, trade, rent, or share your personal information with third parties</li>
+            <li>We do not use your data for advertising profiling, marketing, or any purpose unrelated to the operation of the application</li>
+            <li>Your schedules, tasks, notes, and preferences are stored locally on your device and remain under your control</li>
+          </ul>
+          <h3>4. ACCOUNT SECURITY</h3>
+          <ul>
+            <li>You are responsible for maintaining the confidentiality of your login credentials</li>
+            <li>You may update your account information or change your password at any time</li>
+            <li>You may delete your account and all associated data permanently whenever you wish</li>
+            <li>If you change devices or clear your browser data, locally stored information may not be transferred — we recommend maintaining personal backups of important records</li>
+          </ul>
+          <h3>5. SERVICE PLANS AND FEATURES</h3>
+          <table class="privacy-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th class="center">Free Plan</th>
+                <th class="center">Premium — ₱50/mo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Class Schedule Management</td>
+                <td class="center">✅ Included</td>
+                <td class="center">✅ Included</td>
+              </tr>
+              <tr>
+                <td>Assignments & Deadline Tracking</td>
+                <td class="center">✅ Included</td>
+                <td class="center">✅ Included</td>
+              </tr>
+              <tr>
+                <td>Group Project Tracker</td>
+                <td class="center">✅ Included</td>
+                <td class="center">✅ Included</td>
+              </tr>
+              <tr>
+                <td>AI Study Assistant</td>
+                <td class="center">❌ Not included</td>
+                <td class="center">✅ Included</td>
+              </tr>
+              <tr>
+                <td>Digital Notes & Reviewer</td>
+                <td class="center">❌ Not included</td>
+                <td class="center">✅ Included</td>
+              </tr>
+              <tr>
+                <td>Friends System</td>
+                <td class="center">❌ Not included</td>
+                <td class="center">✅ Included</td>
+              </tr>
+              <tr>
+                <td>Advertisements</td>
+                <td class="center">None</td>
+                <td class="center">None</td>
+              </tr>
+              <tr>
+                <td><strong>Privacy Protection</strong></td>
+                <td class="center">✅ Equal Standards</td>
+                <td class="center">✅ Equal Standards</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>All users receive the same level of privacy and data protection regardless of plan.</p>
+          <h3>6. SUBSCRIPTION AND PAYMENT TERMS</h3>
+          <ul>
+            <li>Premium subscription rate: ₱50.00 Philippine Pesos per calendar month</li>
+            <li>Payment is processed manually via GCash to our official account: <strong>09704564765</strong></li>
+            <li>There is no automatic renewal or recurring billing — you initiate each payment</li>
+            <li>Premium access is valid for thirty (30) days from the date of confirmed payment</li>
+            <li>No refunds will be issued once payment has been sent. Please verify details before proceeding</li>
+            <li>Upon expiration, Premium-only features will be restricted. You may renew at any time</li>
+          </ul>
+          <h3>7. YOUR RIGHTS</h3>
+          <p>As a user, you have the right to:</p>
+          <ul>
+            <li>Access the personal information associated with your account</li>
+            <li>Request correction of inaccurate or updated information</li>
+            <li>Request permanent deletion of your account and all stored data</li>
+            <li>Discontinue use of the application at any time</li>
+            <li>Recover account access using your security credentials</li>
+          </ul>
+          <h3>8. POLICY UPDATES</h3>
+          <p>We may revise this Privacy Policy as necessary to reflect changes in features, legal requirements, or operational practices. Continued use of StudyMate PH following the posting of updated terms constitutes your acceptance of those changes.</p>
+          <h3>9. ACCEPTANCE</h3>
+          <p>By creating an account and accessing StudyMate PH, you acknowledge that you have read, understood, and agreed to the terms stated in this Privacy and Account Protection Policy. If you do not agree with these terms, please do not create an account or use this application.</p>
+          <h3>10. CONTACT INFORMATION</h3>
+          <p>For inquiries regarding this policy, account concerns, or subscription matters:</p>
+          <p style="margin-top:0.5rem;">📱 <strong>GCash:</strong> 09704564765</p>
+          <div class="privacy-footer">
+            StudyMate PH — All-in-One Academic Productivity.<br>
+            Privacy-First. Student-Focused.
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
   <script>
-    // ============= SUBSCRIPTION SYSTEM =============
-    const PREMIUM_PRICE = 50;
+    // ============= PRIVACY MODAL FUNCTIONS =============
+    function openPrivacyModal() {
+      document.getElementById('privacyModal').classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
 
+    function closePrivacyModal() {
+      document.getElementById('privacyModal').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    // Privacy modal event listeners
+    document.getElementById('closePrivacyModal').addEventListener('click', closePrivacyModal);
+    document.getElementById('agreePrivacyBtn').addEventListener('click', () => {
+      document.getElementById('acceptPrivacy').checked = true;
+      closePrivacyModal();
+    });
+    document.getElementById('privacyModal').addEventListener('click', (e) => {
+      if (e.target.id === 'privacyModal') closePrivacyModal();
+    });
+
+    // Privacy links from login/register - OPEN MODAL, NOT DASHBOARD
+    document.getElementById('goToPrivacyFromRegister').addEventListener('click', openPrivacyModal);
+    document.getElementById('viewPrivacyLogin').addEventListener('click', openPrivacyModal);
+
+    // ============= STORAGE HELPERS =============
     function setStorage(key, value) {
       try { localStorage.setItem(key, value); return true; }
       catch (e) { console.error('Storage error:', e); return false; }
@@ -1026,7 +1508,7 @@
       renderAll();
     }
 
-    // Check if current user is Premium
+    // ============= PREMIUM SYSTEM =============
     function isPremium() {
       const currentUser = getStorage('currentUser');
       if (!currentUser) return false;
@@ -1038,7 +1520,6 @@
       } catch { return false; }
     }
 
-    // Update UI based on subscription status
     function updateSubscriptionUI() {
       const premium = isPremium();
       const badge = document.getElementById('subStatusBadge');
@@ -1058,49 +1539,54 @@
         document.getElementById('friendsLock').classList.remove('hidden');
         document.getElementById('subscriptionPageBtn').classList.remove('hidden');
       }
+      updateSectionVisibility();
     }
 
-    // Show/Hide locked content based on section
-    function checkSectionAccess(sectionId) {
+    function updateSectionVisibility() {
       const premium = isPremium();
-      const lockedIds = ['ai-assistant', 'notes', 'friends'];
-      
-      if (!lockedIds.includes(sectionId)) return true;
-      if (premium) return true;
-
-      // Lock the section content
-      const wrapper = document.getElementById(`${sectionId.replace('-assistant','').replace('ai','ai')}ContentWrapper`) || 
-                      document.getElementById('aiContentWrapper');
-      const lockedView = document.getElementById(`${sectionId.replace('-assistant','').replace('ai','ai')}LockedView`) || 
-                        document.getElementById('aiLockedView');
-      
-      if (sectionId === 'ai-assistant') {
+      // AI
+      if (premium) {
+        document.getElementById('aiContentWrapper').classList.remove('hidden');
+        document.getElementById('aiLockedView').classList.add('hidden');
+      } else {
         document.getElementById('aiContentWrapper').classList.add('hidden');
         document.getElementById('aiLockedView').classList.remove('hidden');
-      } else if (sectionId === 'notes') {
+      }
+      // Notes
+      if (premium) {
+        document.getElementById('notesContentWrapper').classList.remove('hidden');
+        document.getElementById('notesLockedView').classList.add('hidden');
+      } else {
         document.getElementById('notesContentWrapper').classList.add('hidden');
         document.getElementById('notesLockedView').classList.remove('hidden');
-      } else if (sectionId === 'friends') {
+      }
+      // Friends
+      if (premium) {
+        document.getElementById('friendsContentWrapper').classList.remove('hidden');
+        document.getElementById('friendsLockedView').classList.add('hidden');
+      } else {
         document.getElementById('friendsContentWrapper').classList.add('hidden');
         document.getElementById('friendsLockedView').classList.remove('hidden');
       }
-      return false;
+      // Privacy Policy is ALWAYS visible
     }
 
-    // Activate Premium
     function activatePremium() {
       const currentUser = getStorage('currentUser');
-      if (!currentUser) return;
+      if (!currentUser) {
+        alert('⚠️ Please log in first!');
+        return;
+      }
       try {
         const user = JSON.parse(currentUser);
         const users = getData('studyMateUsers');
         const idx = users.findIndex(u => u.email === user.email);
         if (idx > -1) {
           users[idx].isPremium = true;
-          setStorage('studyMateUsers',JSON.stringify(users));
+          setStorage('studyMateUsers', JSON.stringify(users));
           updateSubscriptionUI();
           alert('✅ Premium Activated! Thank you! All features are now unlocked!');
-          showSection('subscription');
+          showSection('schedule');
         }
       } catch (e) {
         console.error('Premium activation error:', e);
@@ -1108,22 +1594,11 @@
       }
     }
 
-    // ============= AUTHENTICATION =============
-    let currentUserData = null;
-
-    function calculateAge(birthDateStr) {
-      if (!birthDateStr) return '';
-      const birth = new Date(birthDateStr);
-      const today = new Date();
-      let age = today.getFullYear() - birth.getFullYear();
-      const m = today.getMonth() - birth.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-      return age;
-    }
-
+    // ============= PAGE NAVIGATION =============
     function showPage(pageId) {
       document.getElementById('loginPage').classList.add('hidden');
       document.getElementById('registerPage').classList.add('hidden');
+      document.getElementById('forgotPassPage').classList.add('hidden');
       document.getElementById('mainApp').classList.add('hidden');
       document.getElementById(pageId).classList.remove('hidden');
     }
@@ -1131,37 +1606,14 @@
     function showSection(sectionId) {
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       document.getElementById(sectionId).classList.add('active');
+      // Update nav active state
       document.querySelectorAll('.nav-links li').forEach(li => {
         li.classList.remove('active');
         if (li.dataset.target === sectionId) li.classList.add('active');
       });
-      // Check access
-      if (['ai-assistant','notes','friends'].includes(sectionId)) {
-        if (!isPremium()) {
-          // Show locked view
-          if (sectionId === 'ai-assistant') {
-            document.getElementById('aiContentWrapper').classList.add('hidden');
-            document.getElementById('aiLockedView').classList.remove('hidden');
-          } else if (sectionId === 'notes') {
-            document.getElementById('notesContentWrapper').classList.add('hidden');
-            document.getElementById('notesLockedView').classList.remove('hidden');
-          } else if (sectionId === 'friends') {
-            document.getElementById('friendsContentWrapper').classList.add('hidden');
-            document.getElementById('friendsLockedView').classList.remove('hidden');
-          }
-        } else {
-          // Unlock view
-          if (sectionId === 'ai-assistant') {
-            document.getElementById('aiContentWrapper').classList.remove('hidden');
-            document.getElementById('aiLockedView').classList.add('hidden');
-          } else if (sectionId === 'notes') {
-            document.getElementById('notesContentWrapper').classList.remove('hidden');
-            document.getElementById('notesLockedView').classList.add('hidden');
-          } else if (sectionId === 'friends') {
-            document.getElementById('friendsContentWrapper').classList.remove('hidden');
-            document.getElementById('friendsLockedView').classList.add('hidden');
-          }
-        }
+      // Check access for premium-only sections (privacy is always accessible)
+      if (['ai-assistant', 'notes', 'friends'].includes(sectionId)) {
+        updateSectionVisibility();
       }
       closeSidebar();
     }
@@ -1170,30 +1622,29 @@
       document.getElementById('sidebar').classList.add('open');
       document.getElementById('overlay').classList.add('show');
     }
+
     function closeSidebar() {
       document.getElementById('sidebar').classList.remove('open');
       document.getElementById('overlay').classList.remove('show');
     }
 
-    // Registration auto age
-    document.getElementById('regBirthday').addEventListener('change', e => {
-      document.getElementById('regAge').value = calculateAge(e.target.value);
-    });
-
-    // Register
+    // ============= AUTHENTICATION =============
+    // Registration
     document.getElementById('registerBtn').addEventListener('click', () => {
       const fullname = document.getElementById('regFullname').value.trim();
-      const birthday = document.getElementById('regBirthday').value;
-      const age = document.getElementById('regAge').value;
-      const email = document.getElementById('regEmail').value.trim();
+      const username = document.getElementById('regEmail').value.trim();
       const pass = document.getElementById('regPass').value;
       const confirmPass = document.getElementById('regConfirmPass').value;
-      const contact = document.getElementById('regContact').value.trim();
-      const address = document.getElementById('regAddress').value.trim();
       const secQ = document.getElementById('regSecurityQ').value;
       const secA = document.getElementById('regSecurityA').value.trim();
+      const accepted = document.getElementById('acceptPrivacy').checked;
 
-      if (!fullname || !birthday || !email || !pass || !contact || !address || !secQ || !secA) {
+      if (!accepted) {
+        alert('⚠️ Please read and accept the Privacy Policy first.');
+        openPrivacyModal();
+        return;
+      }
+      if (!fullname || !username || !pass || !secQ || !secA) {
         alert('⚠️ Please fill in ALL required fields.');
         return;
       }
@@ -1207,37 +1658,43 @@
       }
 
       const users = getData('studyMateUsers');
-      if (users.find(u => u.email === email)) {
-        alert('❌ Account already exists with this email/username.');
+      if (users.find(u => u.email === username)) {
+        alert('❌ Account already exists with this username.');
         return;
       }
 
       const newUser = {
-        fullname, birthday, age, email, password: pass,
-        contact, address, securityQuestion: secQ, securityAnswer: secA,
+        fullname,
+        email: username,
+        password: pass,
+        securityQuestion: secQ,
+        securityAnswer: secA,
         isPremium: false,
+        privacyAccepted: true,
         createdAt: new Date().toISOString()
       };
+
       users.push(newUser);
       setStorage('studyMateUsers', JSON.stringify(users));
       alert('✅ Account created successfully! Please log in.');
-      // Clear form
       document.querySelectorAll('#registerPage input, #registerPage select').forEach(el => el.value = '');
+      document.getElementById('acceptPrivacy').checked = false;
       showPage('loginPage');
     });
 
     // Login
     document.getElementById('loginBtn').addEventListener('click', () => {
-      const email = document.getElementById('loginUser').value.trim();
+      const username = document.getElementById('loginUser').value.trim();
       const pass = document.getElementById('loginPass').value;
       const users = getData('studyMateUsers');
-      const found = users.find(u => u.email === email && u.password === pass);
+      const found = users.find(u => u.email === username && u.password === pass);
+
       if (!found) {
-        alert('❌ Invalid email or password.');
+        alert('❌ Invalid username or password.');
         return;
       }
+
       setStorage('currentUser', JSON.stringify({ email: found.email, fullname: found.fullname }));
-      currentUserData = found;
       document.getElementById('userInfoDisplay').innerHTML = `<strong>${found.fullname}</strong><br><small>${found.email}</small>`;
       updateSubscriptionUI();
       showPage('mainApp');
@@ -1245,16 +1702,55 @@
       renderAll();
     });
 
+    // Forgot Password flow
+    document.getElementById('goToForgotPass').addEventListener('click', () => showPage('forgotPassPage'));
+    document.getElementById('goBackToLogin').addEventListener('click', () => showPage('loginPage'));
+    document.getElementById('forgotUsername').addEventListener('blur', () => {
+      const username = document.getElementById('forgotUsername').value.trim();
+      const users = getData('studyMateUsers');
+      const found = users.find(u => u.email === username);
+      if (found) {
+        document.getElementById('forgotSecQ').value = found.securityQuestion;
+      } else {
+        document.getElementById('forgotSecQ').value = '';
+      }
+    });
+    document.getElementById('resetPassBtn').addEventListener('click', () => {
+      const username = document.getElementById('forgotUsername').value.trim();
+      const secA = document.getElementById('forgotSecA').value.trim();
+      const newPass = document.getElementById('newPass').value;
+      const confirmNewPass = document.getElementById('confirmNewPass').value;
+      const users = getData('studyMateUsers');
+      const idx = users.findIndex(u => u.email === username && u.securityAnswer === secA);
+
+      if (idx === -1) {
+        alert('❌ Incorrect security answer or username not found.');
+        return;
+      }
+      if (newPass !== confirmNewPass) {
+        alert('❌ New passwords do not match!');
+        return;
+      }
+      if (newPass.length < 6) {
+        alert('⚠️ Password must be at least 6 characters.');
+        return;
+      }
+
+      users[idx].password = newPass;
+      setStorage('studyMateUsers', JSON.stringify(users));
+      alert('✅ Password reset successful! Please log in.');
+      showPage('loginPage');
+    });
+
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => {
       if (confirm('Log out?')) {
         setStorage('currentUser', '');
-        currentUserData = null;
         showPage('loginPage');
       }
     });
 
-    // Nav toggles
+    // Navigation links
     document.getElementById('goToRegister').addEventListener('click', () => showPage('registerPage'));
     document.getElementById('goToLogin').addEventListener('click', () => showPage('loginPage'));
     document.getElementById('menuBtn').addEventListener('click', openSidebar);
@@ -1265,7 +1761,6 @@
     document.getElementById('goSubFromAi').addEventListener('click', () => showSection('subscription'));
     document.getElementById('goSubFromNotes').addEventListener('click', () => showSection('subscription'));
     document.getElementById('goSubFromFriends').addEventListener('click', () => showSection('subscription'));
-
     document.querySelectorAll('.nav-links li').forEach(li => {
       li.addEventListener('click', () => showSection(li.dataset.target));
     });
@@ -1276,9 +1771,11 @@
       const isDark = document.body.classList.contains('dark-mode');
       setStorage('darkMode', isDark ? 'on' : 'off');
     });
-    if (getStorage('darkMode') === 'on') document.body.classList.add('dark-mode');
+    if (getStorage('darkMode') === 'on') {
+      document.body.classList.add('dark-mode');
+    }
 
-    // ============= SCHEDULE =============
+    // ============= SCHEDULE MODULE =============
     document.getElementById('showSchedFormBtn').addEventListener('click', () => {
       document.getElementById('schedFormBox').classList.add('show');
     });
@@ -1290,12 +1787,16 @@
       const day = document.getElementById('schedDay').value;
       const start = document.getElementById('schedStart').value;
       const end = document.getElementById('schedEnd').value;
+
       if (!subject || !day || !start || !end) {
-        alert('⚠️ Fill in all fields.'); return;
+        alert('⚠️ Fill in all fields.');
+        return;
       }
+
       const schedule = getData('schedule') || [];
       schedule.push({ id: Date.now(), subject, day, start, end });
       saveData('schedule', schedule);
+
       document.getElementById('schedFormBox').classList.remove('show');
       document.getElementById('schedSubject').value = '';
       document.getElementById('schedDay').value = '';
@@ -1307,13 +1808,19 @@
       const list = document.getElementById('scheduleList');
       const data = getData('schedule');
       list.innerHTML = '';
-      if (!data.length) { list.innerHTML = `<li class="empty-msg">No schedules added yet.</li>`; return; }
+
+      if (!data.length) {
+        list.innerHTML = `<li class="empty-msg">No schedules added yet.</li>`;
+        return;
+      }
+
       data.forEach(item => {
         list.innerHTML += `<li>
           <div><strong>${item.subject}</strong><br>${item.day} • ${item.start} – ${item.end}</div>
           <button class="action-btn delete-btn" data-id="${item.id}">Delete</button>
         </li>`;
       });
+
       list.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           let sched = getData('schedule');
@@ -1323,7 +1830,7 @@
       });
     }
 
-    // ============= ASSIGNMENTS =============
+    // ============= ASSIGNMENTS MODULE =============
     document.getElementById('showAssignFormBtn').addEventListener('click', () => {
       document.getElementById('assignFormBox').classList.add('show');
     });
@@ -1334,10 +1841,16 @@
       const title = document.getElementById('assignTitle').value.trim();
       const desc = document.getElementById('assignDesc').value.trim();
       const due = document.getElementById('assignDue').value;
-      if (!title || !due) { alert('⚠️ Fill in all fields.'); return; }
+
+      if (!title || !due) {
+        alert('⚠️ Fill in all fields.');
+        return;
+      }
+
       const assign = getData('assignments') || [];
       assign.push({ id: Date.now(), title, desc, due, status: 'Pending' });
       saveData('assignments', assign);
+
       document.getElementById('assignFormBox').classList.remove('show');
       document.getElementById('assignTitle').value = '';
       document.getElementById('assignDesc').value = '';
@@ -1348,28 +1861,38 @@
       const list = document.getElementById('assignList');
       const data = getData('assignments');
       list.innerHTML = '';
-      if (!data.length) { list.innerHTML = `<li class="empty-msg">No assignments yet.</li>`; return; }
+
+      if (!data.length) {
+        list.innerHTML = `<li class="empty-msg">No assignments yet.</li>`;
+        return;
+      }
+
       data.forEach(item => {
         const isDone = item.status === 'Completed';
         list.innerHTML += `<li>
-          <div style="${isDone?'text-decoration:line-through;opacity:0.6':''}">
+          <div style="${isDone ? 'text-decoration:line-through;opacity:0.6' : ''}">
             <strong>${item.title}</strong><br>
-            ${item.desc?item.desc+'<br>':''}
-            📅 Due: ${item.due} • <span style="color:${isDone?'var(--success)':'var(--warning)'}">${item.status}</span>
+            ${item.desc ? item.desc + '<br>' : ''}
+            📅 Due: ${item.due} • <span style="color:${isDone ? 'var(--success)' : 'var(--warning)'}">${item.status}</span>
           </div>
           <div style="display:flex;gap:0.5rem;">
-            ${!isDone?`<button class="action-btn edit-btn mark-done" data-id="${item.id}">✓ Mark Done</button>`:''}
+            ${!isDone ? `<button class="action-btn edit-btn mark-done" data-id="${item.id}">✓ Mark Done</button>` : ''}
             <button class="action-btn delete-btn del-assign" data-id="${item.id}">Delete</button>
           </div>
         </li>`;
       });
+
       list.querySelectorAll('.mark-done').forEach(btn => {
         btn.addEventListener('click', () => {
           const assigns = getData('assignments');
           const idx = assigns.findIndex(a => a.id === parseInt(btn.dataset.id));
-          if (idx > -1) { assigns[idx].status = 'Completed'; saveData('assignments', assigns); }
+          if (idx > -1) {
+            assigns[idx].status = 'Completed';
+            saveData('assignments', assigns);
+          }
         });
       });
+
       list.querySelectorAll('.del-assign').forEach(btn => {
         btn.addEventListener('click', () => {
           let assigns = getData('assignments');
@@ -1379,7 +1902,7 @@
       });
     }
 
-    // ============= PROJECTS =============
+    // ============= PROJECTS MODULE =============
     document.getElementById('showProjFormBtn').addEventListener('click', () => {
       document.getElementById('projFormBox').classList.add('show');
     });
@@ -1390,10 +1913,16 @@
       const name = document.getElementById('projName').value.trim();
       const members = document.getElementById('projMembers').value.trim();
       const deadline = document.getElementById('projDeadline').value;
-      if (!name || !deadline) { alert('⚠️ Fill in all fields.'); return; }
+
+      if (!name || !deadline) {
+        alert('⚠️ Fill in all fields.');
+        return;
+      }
+
       const projects = getData('projects') || [];
       projects.push({ id: Date.now(), name, members, deadline });
       saveData('projects', projects);
+
       document.getElementById('projFormBox').classList.remove('show');
       document.getElementById('projName').value = '';
       document.getElementById('projMembers').value = '';
@@ -1404,17 +1933,23 @@
       const list = document.getElementById('projList');
       const data = getData('projects');
       list.innerHTML = '';
-      if (!data.length) { list.innerHTML = `<li class="empty-msg">No projects added yet.</li>`; return; }
+
+      if (!data.length) {
+        list.innerHTML = `<li class="empty-msg">No projects added yet.</li>`;
+        return;
+      }
+
       data.forEach(item => {
         list.innerHTML += `<li>
           <div>
             <strong>${item.name}</strong><br>
-            ${item.members?`👥 Members: ${item.members}<br>`:''}
+            ${item.members ? `👥 Members: ${item.members}<br>` : ''}
             📅 Deadline: ${item.deadline}
           </div>
           <button class="action-btn delete-btn del-proj" data-id="${item.id}">Delete</button>
         </li>`;
       });
+
       list.querySelectorAll('.del-proj').forEach(btn => {
         btn.addEventListener('click', () => {
           let projs = getData('projects');
@@ -1424,20 +1959,23 @@
       });
     }
 
-    // ============= AI ASSISTANT =============
+    // ============= AI ASSISTANT MODULE =============
     document.getElementById('ai-send').addEventListener('click', sendAiMessage);
     document.getElementById('ai-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') sendAiMessage();
     });
+
     function sendAiMessage() {
       const input = document.getElementById('ai-input');
       const msg = input.value.trim();
       if (!msg) return;
+
       const chatBox = document.getElementById('chat-box');
       chatBox.innerHTML += `<div class="message user-msg">${msg}</div>`;
       input.value = '';
       chatBox.innerHTML += `<div class="message ai-msg typing">StudyMate AI is thinking...</div>`;
       chatBox.scrollTop = chatBox.scrollHeight;
+
       setTimeout(() => {
         const replies = [
           "Great question! Let's break it down simply.",
@@ -1455,7 +1993,7 @@
       }, 1200);
     }
 
-    // ============= NOTES =============
+    // ============= NOTES & REVIEWER MODULE =============
     let activeFilter = 'all';
     let reviewNotes = [];
     let reviewIndex = 0;
@@ -1469,9 +2007,11 @@
       document.getElementById('noteSubject').value = '';
       document.getElementById('noteContent').value = '';
     });
+
     document.getElementById('hideNoteFormBtn').addEventListener('click', () => {
       document.getElementById('noteFormBox').classList.remove('show');
     });
+
     document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -1480,13 +2020,19 @@
         renderNotes();
       });
     });
+
     document.getElementById('saveNoteBtn').addEventListener('click', () => {
       const title = document.getElementById('noteTitle').value.trim();
       const type = document.getElementById('noteType').value;
       const subject = document.getElementById('noteSubject').value.trim();
       const content = document.getElementById('noteContent').value.trim();
       const editId = document.getElementById('editNoteId').value;
-      if (!title || !content) { alert('⚠️ Title and content are required.'); return; }
+
+      if (!title || !content) {
+        alert('⚠️ Title and content are required.');
+        return;
+      }
+
       let notes = getData('notes');
       if (editId) {
         const idx = notes.findIndex(n => n.id === parseInt(editId));
@@ -1496,24 +2042,31 @@
       } else {
         notes.unshift({ id: Date.now(), title, type, subject, content, createdAt: new Date().toISOString() });
       }
+
       saveData('notes', notes);
       document.getElementById('noteFormBox').classList.remove('show');
     });
+
     document.getElementById('noteSearch').addEventListener('input', renderNotes);
 
     function renderNotes() {
       const list = document.getElementById('notesList');
       let notes = getData('notes');
       const search = document.getElementById('noteSearch').value.toLowerCase();
-      // Filter
+
       if (activeFilter !== 'all') notes = notes.filter(n => n.type === activeFilter);
       if (search) notes = notes.filter(n =>
         n.title.toLowerCase().includes(search) ||
         (n.subject && n.subject.toLowerCase().includes(search)) ||
         n.content.toLowerCase().includes(search)
       );
+
       list.innerHTML = '';
-      if (!notes.length) { list.innerHTML = `<li class="empty-msg">No notes found.</li>`; return; }
+      if (!notes.length) {
+        list.innerHTML = `<li class="empty-msg">No notes found.</li>`;
+        return;
+      }
+
       notes.forEach(item => {
         list.innerHTML += `<li>
           <div>
@@ -1521,17 +2074,18 @@
               <strong>${item.title}</strong>
               <span class="tag">${item.type}</span>
             </div>
-            ${item.subject?`<span class="note-meta">📚 ${item.subject}</span>`:''}
-            <div class="note-content">${item.content.substring(0,100)}${item.content.length>100?'...':''}</div>
+            ${item.subject ? `<span class="note-meta">📚 ${item.subject}</span>` : ''}
+            <div class="note-content">${item.content.substring(0, 100)}${item.content.length > 100 ? '...' : ''}</div>
             <div class="note-meta">${new Date(item.createdAt).toLocaleString()}</div>
             <div class="note-actions">
               <button class="action-btn edit-btn edit-note" data-id="${item.id}">Edit</button>
-              ${item.type==='reviewer'||item.type==='flashcard'?`<button class="action-btn review-btn start-review" data-id="${item.id}">Review</button>`:''}
+              ${item.type === 'reviewer' || item.type === 'flashcard' ? `<button class="action-btn review-btn start-review" data-id="${item.id}">Review</button>` : ''}
               <button class="action-btn delete-btn del-note" data-id="${item.id}">Delete</button>
             </div>
           </div>
         </li>`;
       });
+
       list.querySelectorAll('.edit-note').forEach(btn => {
         btn.addEventListener('click', () => {
           const note = getData('notes').find(n => n.id === parseInt(btn.dataset.id));
@@ -1539,14 +2093,13 @@
           document.getElementById('editNoteId').value = note.id;
           document.getElementById('noteTitle').value = note.title;
           document.getElementById('noteType').value = note.type;
-          document.getElementById('noteSubject').value = note.subject||'';
+          document.getElementById('noteSubject').value = note.subject || '';
           document.getElementById('noteContent').value = note.content;
           document.getElementById('noteFormTitle').textContent = 'Edit Note';
           document.getElementById('noteFormBox').classList.add('show');
-          document.getElementById('notesListContainer').classList.add('hidden');
-          setTimeout(()=>document.getElementById('notesListContainer').classList.remove('hidden'), 10);
         });
       });
+
       list.querySelectorAll('.del-note').forEach(btn => {
         btn.addEventListener('click', () => {
           if (!confirm('Delete this note?')) return;
@@ -1555,10 +2108,14 @@
           saveData('notes', notes);
         });
       });
+
       list.querySelectorAll('.start-review').forEach(btn => {
         btn.addEventListener('click', () => {
-          reviewNotes = getData('notes').filter(n => n.type==='reviewer'||n.type==='flashcard');
-          if (!reviewNotes.length) { alert('No reviewers available.'); return; }
+          reviewNotes = getData('notes').filter(n => n.type === 'reviewer' || n.type === 'flashcard');
+          if (!reviewNotes.length) {
+            alert('No reviewers available.');
+            return;
+          }
           reviewIndex = 0;
           document.getElementById('notesListContainer').classList.add('hidden');
           document.getElementById('reviewModeContainer').classList.remove('hidden');
@@ -1579,21 +2136,24 @@
       document.getElementById('reviewQuestion').textContent = q;
       document.getElementById('reviewAnswer').textContent = a || 'Answer not specified.';
       document.getElementById('reviewCard').classList.remove('show-answer');
-      document.getElementById('reviewCounter').textContent = `${reviewIndex+1} / ${reviewNotes.length}`;
+      document.getElementById('reviewCounter').textContent = `${reviewIndex + 1} / ${reviewNotes.length}`;
     }
+
     document.getElementById('reviewCard').addEventListener('click', () => {
       document.getElementById('reviewCard').classList.toggle('show-answer');
     });
+
     document.getElementById('nextReviewBtn').addEventListener('click', () => {
-      reviewIndex = (reviewIndex+1) % reviewNotes.length;
+      reviewIndex = (reviewIndex + 1) % reviewNotes.length;
       showReviewCard();
     });
+
     document.getElementById('exitReviewBtn').addEventListener('click', () => {
       document.getElementById('reviewModeContainer').classList.add('hidden');
       document.getElementById('notesListContainer').classList.remove('hidden');
     });
 
-    // ============= FRIENDS (placeholder structure) =============
+    // ============= FRIENDS MODULE =============
     function renderFriends() {
       document.getElementById('friendRequestsList').innerHTML = `<li class="empty-msg">Friend requests appear here.</li>`;
       document.getElementById('friendsList').innerHTML = `<li class="empty-msg">Search for users to add friends.</li>`;
@@ -1608,17 +2168,17 @@
       renderFriends();
     }
 
-    // ============= INITIAL CHECK =============
+    // ============= INITIAL LOAD =============
     window.addEventListener('load', () => {
       const savedUser = getStorage('currentUser');
       if (savedUser) {
         try {
           const u = JSON.parse(savedUser);
-          currentUserData = u;
           document.getElementById('userInfoDisplay').innerHTML = `<strong>${u.fullname}</strong><br><small>${u.email}</small>`;
           updateSubscriptionUI();
           showPage('mainApp');
           showSection('schedule');
+          renderAll();
         } catch {}
       }
     });
