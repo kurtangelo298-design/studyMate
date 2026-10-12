@@ -4,7 +4,7 @@ import os
 import datetime
 import uuid
 import hashlib
-from dateutil.relativedelta import relativedelta
+# FIX: tinanggal ang "from dateutil.relativedelta import relativedelta" (hindi ginagamit, at nag-e-error kung wala ang package)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
@@ -13,6 +13,7 @@ PREMIUM_PRICE = 50.00
 PREMIUM_DAYS = 30
 GCASH_NUMBER = "0917-123-4567"  # Palitan mo ng totoong GCash number mo
 GCASH_NAME = "Juan Dela Cruz"
+ADMIN_KEY = os.environ.get("ADMIN_KEY", "")  # FIX: para sa pag-activate ng Premium (tingnan ang /api/premium/approve)
 
 # ==================== DATABASE HELPERS ====================
 def get_db():
@@ -259,8 +260,8 @@ def login():
         return jsonify({'success': False, 'error': 'Invalid email or password'})
     
     session['user_id'] = user['user_id']
-    if not remember:
-        session.permanent = False
+    # FIX: dati ay "if not remember: session.permanent = False" lang, kaya walang epekto ang Remember Me
+    session.permanent = bool(remember)
     
     return jsonify({'success': True, 'user_id': user['user_id'], 'name': user['full_name']})
 
@@ -370,6 +371,41 @@ def confirm_payment():
         'success': True,
         'message': 'Payment submitted! Please wait for admin confirmation (usually within 24 hours).'
     })
+
+# FIX: dati ay walang route na nag-a-activate ng Premium, kaya hindi kailanman nagiging Premium ang user.
+# Tawagin ito ng admin (o ng payment webhook) kapag nakumpirma na ang bayad:
+#   POST /api/premium/approve   header: X-Admin-Key: <ADMIN_KEY>   body: {"reference_id": "TH-..."}
+@app.route('/api/premium/approve', methods=['POST'])
+def approve_payment():
+    if not ADMIN_KEY or request.headers.get('X-Admin-Key', '') != ADMIN_KEY:
+        return jsonify({'error': 'Forbidden'}), 403
+    reference_id = (request.get_json(silent=True) or {}).get('reference_id', '')
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM payments WHERE reference_id = ?", (reference_id,))
+    payment = cur.fetchone()
+    if not payment:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Reference ID not found'}), 404
+    if payment['status'] == 'activated':
+        conn.close()
+        return jsonify({'success': True, 'message': 'Already activated'})
+    now = get_ph_time().replace(tzinfo=None)
+    cur.execute("SELECT premium_expiry FROM users WHERE user_id = ?", (payment['user_id'],))
+    row = cur.fetchone()
+    start = now
+    if row and row['premium_expiry']:
+        old = datetime.datetime.strptime(row['premium_expiry'], "%Y-%m-%d %H:%M:%S")
+        if old > now:
+            start = old  # renewal: dagdag sa natitirang araw
+    expiry = start + datetime.timedelta(days=PREMIUM_DAYS)
+    cur.execute("UPDATE users SET is_premium = 1, premium_start = COALESCE(premium_start, ?), premium_expiry = ? WHERE user_id = ?",
+                (format_date(now), format_date(expiry), payment['user_id']))
+    cur.execute("UPDATE payments SET status = 'activated', activated_at = ? WHERE reference_id = ?",
+                (format_date(now), reference_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Premium activated'})
 
 @app.route('/api/premium/status', methods=['GET'])
 def premium_status():
@@ -623,6 +659,49 @@ def budget():
         conn.close()
         return jsonify({'success': True})
 
+# ==================== PLANNER API ====================
+# FIX: dati ay walang /api/planner route kahit tinatawag ito ng frontend (loadGoals, saveGoal, atbp.)
+@app.route('/api/planner', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def planner():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    conn = get_db()
+    cur = conn.cursor()
+    now = format_date(get_ph_time())
+
+    if request.method == 'GET':
+        cur.execute("SELECT * FROM planner WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+        items = cur.fetchall()
+        conn.close()
+        return jsonify([dict(g) for g in items])
+
+    elif request.method == 'POST':
+        data = request.get_json()
+        cur.execute("""
+            INSERT INTO planner (user_id, goal, target_date, progress, created_at)
+            VALUES (?, ?, ?, 0, ?)
+        """, (user_id, data['goal'], data.get('target_date', ''), now))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+    elif request.method == 'PUT':
+        data = request.get_json()
+        progress = max(0, min(100, int(data.get('progress', 0))))
+        cur.execute("UPDATE planner SET progress = ? WHERE id = ? AND user_id = ?",
+                    (progress, data['id'], user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+    elif request.method == 'DELETE':
+        goal_id = request.args.get('id')
+        cur.execute("DELETE FROM planner WHERE id = ? AND user_id = ?", (goal_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
 # ==================== FRONTEND HTML ====================
 FRONTEND_HTML = '''
 <!DOCTYPE html>
@@ -752,7 +831,9 @@ input[type="checkbox"] {width: auto; margin-right: 8px;}
 '''
 
 # Continue the rest of the HTML template
-FRONTEND_HTML += '''
+# FIX: ginawang raw string (r''') para hindi sirain ng Python ang mga \' sa loob ng JavaScript
+# (hal. 'You\'re all caught up!' ay naging 'You're all caught up!' kaya nag-syntax error ang buong script)
+FRONTEND_HTML += r'''
 </style>
 </head>
 <body>
@@ -781,7 +862,7 @@ FRONTEND_HTML += '''
                     <button type="submit" class="btn btn-primary">Log In</button>
                 </form>
                 <div class="link">
-                    Don't have an account? <a href="#" onclick="showPage('register')">Sign Up</a>
+                    Don't have an account? <a href="#" onclick="showAuthPage('register'); return false;">Sign Up</a>
                 </div>
             </div>
         </div>
@@ -821,7 +902,7 @@ FRONTEND_HTML += '''
                     <button type="submit" class="btn btn-primary">Create Account</button>
                 </form>
                 <div class="link">
-                    Already have an account? <a href="#" onclick="showPage('login')">Log In</a>
+                    Already have an account? <a href="#" onclick="showAuthPage('login'); return false;">Log In</a>
                 </div>
             </div>
         </div>
@@ -1426,13 +1507,14 @@ function checkSession() {
 function showAuthPage(page) {
     document.getElementById('authSection').style.display = 'block';
     document.getElementById('mainApp').style.display = 'none';
-    document.getElementById('loginPage').style.display = page === 'login' ? 'block' : 'none';
-    document.getElementById('registerPage').style.display = page === 'register' ? 'block' : 'none';
+    document.getElementById('loginPage').style.display = page === 'login' ? 'flex' : 'none';
+    document.getElementById('registerPage').style.display = page === 'register' ? 'flex' : 'none';
 }
 
 function showPage(pageName) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(page${pageName.charAt(0).toUpperCase() + pageName.slice(1)}).classList.add('active');
+    // FIX: dati ay walang backtick: document.getElementById(page${...}) -> syntax error
+    document.getElementById(`page${pageName.charAt(0).toUpperCase() + pageName.slice(1)}`).classList.add('active');
     
     const titles = {
         dashboard: 'Dashboard', tasks: 'My Tasks', schedule: 'Schedule', notes: 'Notes',
@@ -1472,6 +1554,7 @@ function updateUserUI() {
     document.getElementById('settingsSID').textContent = currentUser.student_id;
     document.getElementById('settingsCourse').textContent = currentUser.course_year;
     document.getElementById('settingsJoin').textContent = new Date(currentUser.join_date).toLocaleDateString('en-PH');
+    setGreeting(); // FIX: para lumabas ang pangalan sa greeting pagka-login
     
     updatePremiumUI();
 }
@@ -1485,7 +1568,8 @@ function updatePremiumUI() {
     
     if (isPremium) {
         premiumBadge.style.display = 'block';
-        expiryText.textContent = Valid until: ${currentUser.premium_expiry ? new Date(currentUser.premium_expiry).toLocaleDateString('en-PH') : '--'};
+        // FIX: kulang ng backtick
+        expiryText.textContent = `Valid until: ${currentUser.premium_expiry ? new Date(currentUser.premium_expiry).toLocaleDateString('en-PH') : '--'}`;
         budgetMenu.classList.remove('locked');
         budgetMenu.querySelector('.lock').style.display = 'none';
         planText.textContent = '👑 Premium';
@@ -1511,6 +1595,19 @@ function updateBottomNav(page) {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
         if (item.dataset.page === page) item.classList.add('active');
+    });
+}
+
+// FIX: helper para ma-reset nang tama ang mga form pagkatapos mag-save.
+// Dati: querySelectorAll('input, textarea, select').forEach(el => el.value = '') -> nagiging blangko ang
+// Priority/Day/Folder/Type at ang Due Time/Units, kaya nase-save ang maling data sa susunod.
+function resetModal(id) {
+    document.getElementById(id).querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.type === 'checkbox') el.checked = false;
+        else if (el.tagName === 'SELECT') {
+            const i = [...el.options].findIndex(o => o.defaultSelected);
+            el.selectedIndex = i < 0 ? 0 : i;
+        } else el.value = el.defaultValue;
     });
 }
 
@@ -1542,7 +1639,8 @@ function setGreeting() {
     let greeting = 'Good Evening';
     if (hour >= 5 && hour < 12) greeting = 'Good Morning';
     else if (hour >= 12 && hour < 18) greeting = 'Good Afternoon';
-    document.getElementById('greeting').textContent = ${greeting}${currentUser ? ', ' + currentUser.full_name.split(' ')[0] : ''}!;
+    // FIX: kulang ng backtick
+    document.getElementById('greeting').textContent = `${greeting}${currentUser ? ', ' + currentUser.full_name.split(' ')[0] : ''}!`;
 }
 
 function setDailyQuote() {
@@ -1653,6 +1751,8 @@ function loadTasks() {
 function saveTask() {
     const title = document.getElementById('taskTitle').value.trim();
     if (!title) { alert('Please enter a title!'); return; }
+    // FIX: due date ay required pero hindi chine-check
+    if (!document.getElementById('taskDueDate').value) { alert('Please pick a due date!'); return; }
     
     const data = {
         title: title,
@@ -1672,7 +1772,7 @@ function saveTask() {
     .then(res => res.json())
     .then(() => {
         closeModal('addTaskModal');
-        document.getElementById('addTaskModal').querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+        resetModal('addTaskModal'); // FIX
         loadTasks();
     });
 }
@@ -1689,7 +1789,7 @@ function toggleTaskComplete(id, currentStatus) {
 
 function deleteTask(id) {
     if (!confirm('Delete this task?')) return;
-    fetch(/api/tasks?id=${id}, {method: 'DELETE'})
+    fetch(`/api/tasks?id=${id}`, {method: 'DELETE'}) // FIX: backtick
         .then(res => res.json())
         .then(() => loadTasks());
 }
@@ -1719,9 +1819,9 @@ function renderDashboardTasks() {
         upcomingList.innerHTML = upcomingTasks.map(t => {
             const daysLeft = getDaysRemaining(t.due_date);
             let dueClass = 'due-later';
-            let dueText = ${daysLeft} days left;
+            let dueText = `${daysLeft} days left`; // FIX: backtick
             if (daysLeft === 0) { dueClass = 'due-today'; dueText = 'Today!'; }
-            else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = ${Math.abs(daysLeft)} days overdue; }
+            else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = `${Math.abs(daysLeft)} days overdue`; } // FIX: backtick
             else if (daysLeft <= 2) { dueClass = 'due-today'; }
             
             return `
@@ -1749,9 +1849,9 @@ function renderAllTasks() {
     container.innerHTML = tasks.sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).map(t => {
         const daysLeft = getDaysRemaining(t.due_date);
         let dueClass = 'due-later';
-        let dueText = ${daysLeft}d;
+        let dueText = `${daysLeft}d`; // FIX: backtick
         if (daysLeft === 0) { dueClass = 'due-today'; dueText = 'Today'; }
-        else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = ${Math.abs(daysLeft)}d overdue; }
+        else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = `${Math.abs(daysLeft)}d overdue`; } // FIX: backtick
         
         return `
             <div class="card" style="margin-bottom: 10px;">
@@ -1761,11 +1861,11 @@ function renderAllTasks() {
                     <div class="task-text">
                         <div class="task-title ${t.completed ? 'completed' : ''}">${t.title}</div>
                         <div class="task-meta">
-                            ${t.subject ? <strong>${t.subject}</strong> ·  : ''}
+                            ${t.subject ? `<strong>${t.subject}</strong> · ` : ''}
                             ${new Date(t.due_date).toLocaleDateString('en-PH')} ${t.due_time || ''}
                             <span class="task-due ${dueClass}">${dueText}</span>
                         </div>
-                        ${t.description ? <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">${t.description}</div> : ''}
+                        ${t.description ? `<div style="font-size: 12px; color: var(--muted); margin-top: 4px;">${t.description}</div>` : ''}
                     </div>
                     <button onclick="deleteTask(${t.id})" style="background: none; border: none; color: var(--danger); cursor: pointer;">🗑️</button>
                 </div>
@@ -1782,14 +1882,14 @@ function updateStats() {
     const overdue = tasks.filter(t => !t.completed && t.due_date < today).length;
     const percent = total > 0 ? Math.round((done / total) * 100) : 0;
     
-    document.getElementById('statPercent').textContent = ${percent}%;
+    document.getElementById('statPercent').textContent = `${percent}%`; // FIX: backtick
     document.getElementById('statDone').textContent = done;
     document.getElementById('statPending').textContent = pending;
     document.getElementById('statOverdue').textContent = overdue;
     
     // Update progress circle
     document.querySelector('.stat-circle').style.background = 
-        conic-gradient(var(--primary) ${percent}%, var(--border) ${percent}% 100%);
+        `conic-gradient(var(--primary) ${percent}%, var(--border) ${percent}% 100%)`; // FIX: backtick
 }
 
 // --- SCHEDULE ---
@@ -1804,6 +1904,11 @@ function loadSchedule() {
 }
 
 function saveSchedule() {
+    // FIX: walang validation; nase-save kahit blangko
+    if (!document.getElementById('schSubject').value.trim()) { alert('Please enter a subject!'); return; }
+    if (!document.getElementById('schStart').value || !document.getElementById('schEnd').value) { alert('Please set start and end time!'); return; }
+    if (document.getElementById('schEnd').value <= document.getElementById('schStart').value) { alert('End time must be after start time!'); return; }
+
     const data = {
         subject: document.getElementById('schSubject').value,
         day: document.getElementById('schDay').value,
@@ -1820,14 +1925,14 @@ function saveSchedule() {
     .then(res => res.json())
     .then(() => {
         closeModal('addScheduleModal');
-        document.getElementById('addScheduleModal').querySelectorAll('input, select').forEach(el => el.value = '');
+        resetModal('addScheduleModal'); // FIX
         loadSchedule();
     });
 }
 
 function deleteSchedule(id) {
     if (!confirm('Delete this schedule?')) return;
-    fetch(/api/schedule?id=${id}, {method: 'DELETE'})
+    fetch(`/api/schedule?id=${id}`, {method: 'DELETE'}) // FIX: backtick
         .then(res => res.json())
         .then(() => loadSchedule());
 }
@@ -1863,7 +1968,7 @@ function formatTime(t) {
     const hour = parseInt(h);
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const h12 = hour % 12 || 12;
-    return ${h12}:${m} ${ampm};
+    return `${h12}:${m} ${ampm}`; // FIX: backtick
 }
 
 function renderFullSchedule() {
@@ -1925,14 +2030,14 @@ function saveNote() {
     .then(res => res.json())
     .then(() => {
         closeModal('addNoteModal');
-        document.getElementById('addNoteModal').querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+        resetModal('addNoteModal'); // FIX
         loadNotes();
     });
 }
 
 function deleteNote(id) {
     if (!confirm('Delete this note?')) return;
-    fetch(/api/notes?id=${id}, {method: 'DELETE'})
+    fetch(`/api/notes?id=${id}`, {method: 'DELETE'}) // FIX: backtick
         .then(res => res.json())
         .then(() => loadNotes());
 }
@@ -1958,7 +2063,7 @@ function renderNotes() {
                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                             <div>
                                 <div style="font-weight: 500;">${n.title}</div>
-                                ${n.content ? <div style="font-size: 13px; color: var(--muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;">${n.content}</div> : ''}
+                                ${n.content ? `<div style="font-size: 13px; color: var(--muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;">${n.content}</div>` : ''}
                                 <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">${new Date(n.updated_at).toLocaleDateString('en-PH')}</div>
                             </div>
                             <button onclick="deleteNote(${n.id})" style="background: none; border: none; color: var(--danger); cursor: pointer;">🗑️</button>
@@ -1998,7 +2103,7 @@ function saveProject() {
     .then(res => res.json())
     .then(() => {
         closeModal('addProjectModal');
-        document.getElementById('addProjectModal').querySelectorAll('input').forEach(el => el.value = '');
+        resetModal('addProjectModal'); // FIX
         loadProjects();
     });
 }
@@ -2015,7 +2120,7 @@ function updateProjectStatus(id, status) {
 
 function deleteProject(id) {
     if (!confirm('Delete this project?')) return;
-    fetch(/api/projects?id=${id}, {method: 'DELETE'})
+    fetch(`/api/projects?id=${id}`, {method: 'DELETE'}) // FIX: backtick
         .then(res => res.json())
         .then(() => loadProjects());
 }
@@ -2034,11 +2139,11 @@ function renderProjects() {
                 <h4 style="font-size: 16px;">${p.name}</h4>
                 <span style="font-size: 12px; padding: 3px 8px; border-radius: 10px; background: ${p.status === 'Completed' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)'} ; color: ${p.status === 'Completed' ? 'var(--success)' : 'var(--warning)'};">${p.status}</span>
             </div>
-            ${p.members ? <p style="font-size: 13px; color: var(--muted);"><strong>Members:</strong> ${p.members}</p> : ''}
-            ${p.deadline ? <p style="font-size: 13px; color: var(--muted);"><strong>Deadline:</strong> ${new Date(p.deadline).toLocaleDateString('en-PH')}</p> : ''}
+            ${p.members ? `<p style="font-size: 13px; color: var(--muted);"><strong>Members:</strong> ${p.members}</p>` : ''}
+            ${p.deadline ? `<p style="font-size: 13px; color: var(--muted);"><strong>Deadline:</strong> ${new Date(p.deadline).toLocaleDateString('en-PH')}</p>` : ''}
             <div style="display: flex; gap: 8px; margin-top: 12px;">
                 ${p.status !== 'Completed' 
-                    ? <button class="btn btn-success btn-sm" onclick="updateProjectStatus(${p.id}, 'Completed')">✓ Mark Done</button>
+                    ? `<button class="btn btn-success btn-sm" onclick="updateProjectStatus(${p.id}, 'Completed')">✓ Mark Done</button>`
                     : ''}
                 <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})">🗑️ Delete</button>
             </div>
@@ -2080,14 +2185,14 @@ function saveGrade() {
     .then(res => res.json())
     .then(() => {
         closeModal('addGradeModal');
-        document.getElementById('addGradeModal').querySelectorAll('input').forEach(el => el.value = '');
+        resetModal('addGradeModal'); // FIX
         loadGrades();
     });
 }
 
 function deleteGrade(id) {
     if (!confirm('Delete this grade entry?')) return;
-    fetch(/api/grades?id=${id}, {method: 'DELETE'})
+    fetch(`/api/grades?id=${id}`, {method: 'DELETE'}) // FIX: backtick
         .then(res => res.json())
         .then(() => loadGrades());
 }
@@ -2187,14 +2292,14 @@ function saveBudget() {
     .then(res => res.json())
     .then(() => {
         closeModal('addBudgetModal');
-        document.getElementById('addBudgetModal').querySelectorAll('input, select').forEach(el => el.value = '');
+        resetModal('addBudgetModal'); // FIX
         loadBudget();
     });
 }
 
 function deleteBudget(id) {
     if (!confirm('Delete this transaction?')) return;
-    fetch(/api/budget?id=${id}, {method: 'DELETE'})
+    fetch(`/api/budget?id=${id}`, {method: 'DELETE'}) // FIX: backtick
         .then(res => res.json())
         .then(() => loadBudget());
 }
@@ -2207,9 +2312,10 @@ function renderBudget() {
     });
     const balance = totalIncome - totalExpense;
     
-    document.getElementById('budgetBalance').textContent = ₱${balance.toFixed(2)};
-    document.getElementById('totalIncome').textContent = +₱${totalIncome.toFixed(2)};
-    document.getElementById('totalExpense').textContent = -₱${totalExpense.toFixed(2)};
+    // FIX: kulang ng backtick sa tatlong linyang ito
+    document.getElementById('budgetBalance').textContent = `₱${balance.toFixed(2)}`;
+    document.getElementById('totalIncome').textContent = `+₱${totalIncome.toFixed(2)}`;
+    document.getElementById('totalExpense').textContent = `-₱${totalExpense.toFixed(2)}`;
     
     const container = document.getElementById('budgetList');
     if (budget.length === 0) {
@@ -2277,7 +2383,7 @@ function updateGoalProgress(id, progress) {
 
 function deleteGoal(id) {
     if (!confirm('Delete this goal?')) return;
-    fetch(/api/planner?id=${id}, {method: 'DELETE'})
+    fetch(`/api/planner?id=${id}`, {method: 'DELETE'}) // FIX: backtick
         .then(res => res.json())
         .then(() => loadGoals());
 }
@@ -2295,7 +2401,7 @@ function renderGoals() {
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                 <div style="flex: 1;">
                     <div style="font-weight: 500; font-size: 15px;">${g.goal}</div>
-                    ${g.target_date ? <div style="font-size: 12px; color: var(--muted);">Target: ${new Date(g.target_date).toLocaleDateString('en-PH')}</div> : ''}
+                    ${g.target_date ? `<div style="font-size: 12px; color: var(--muted);">Target: ${new Date(g.target_date).toLocaleDateString('en-PH')}</div>` : ''}
                 </div>
                 <div style="font-weight: 600; color: var(--primary);">${g.progress}%</div>
             </div>
@@ -2317,14 +2423,18 @@ function loadPremiumStatus() {
     fetch('/api/premium/status')
         .then(res => res.json())
         .then(data => {
+            const wasPremium = isPremium;
             isPremium = data.is_premium;
+            if (currentUser) currentUser.premium_expiry = data.expiry_date; // FIX: para tama ang "Valid until" sa sidebar
             updatePremiumUI();
+            if (isPremium && !wasPremium) loadBudget(); // FIX: i-load ang Budget pagka-activate
             
             if (isPremium) {
                 document.getElementById('premiumInactive').style.display = 'none';
                 document.getElementById('premiumActive').style.display = 'block';
-                document.getElementById('premiumExpiryText').textContent = Valid until: ${data.expiry_date ? new Date(data.expiry_date).toLocaleDateString('en-PH') : '--'};
-                document.getElementById('premiumCountdown').innerHTML = Your Premium expires in: <strong>${data.days_left} days</strong>;
+                // FIX: kulang ng backtick
+                document.getElementById('premiumExpiryText').textContent = `Valid until: ${data.expiry_date ? new Date(data.expiry_date).toLocaleDateString('en-PH') : '--'}`;
+                document.getElementById('premiumCountdown').innerHTML = `Your Premium expires in: <strong>${data.days_left} days</strong>`;
             } else {
                 document.getElementById('premiumInactive').style.display = 'block';
                 document.getElementById('premiumActive').style.display = 'none';
@@ -2339,7 +2449,8 @@ function generateReference() {
             if (data.success) {
                 referenceId = data.reference_id;
                 document.getElementById('refIdDisplay').value = referenceId;
-                document.getElementById('paymentStatusText').textContent = ✅ Reference ID generated! Send ₱${data.amount} via GCash.;
+                // FIX: kulang ng backtick
+                document.getElementById('paymentStatusText').textContent = `✅ Reference ID generated! Send ₱${data.amount} via GCash.`;
                 document.getElementById('paymentStatusText').style.color = 'var(--success)';
             }
         });
@@ -2382,7 +2493,8 @@ document.addEventListener('click', function(e) {
 '''
 
 # ==================== RUN APP ====================
+init_db()  # FIX: dati ay sa __main__ lang kaya walang table kapag hindi "python app.py" ang pinatakbo
+
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
