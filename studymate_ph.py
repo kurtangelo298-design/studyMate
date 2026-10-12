@@ -1,1664 +1,2388 @@
-"""
-StudyMate PH - Plan. Study. Achieve.
-Fully functional desktop study app (Python + CustomTkinter)
-Flow: Loading Screen -> Login -> Full Dashboard (all features with default data)
-"""
-
-import customtkinter as ctk
-import tkinter as tk
-from tkinter import messagebox, filedialog
-import datetime
-import json
+from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for
+import sqlite3
 import os
-import csv
-import random
-import math
-from PIL import Image, ImageDraw, ImageTk
+import datetime
+import uuid
+import hashlib
+from dateutil.relativedelta import relativedelta
 
-# ============================================================
-# APP PATHS & DATA
-# ============================================================
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(APP_DIR, "studymate_data.json")
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
+DATABASE = "taskhive.db"
+PREMIUM_PRICE = 50.00
+PREMIUM_DAYS = 30
+GCASH_NUMBER = "0917-123-4567"  # Palitan mo ng totoong GCash number mo
+GCASH_NAME = "Juan Dela Cruz"
 
-# Color palette - dark theme matching the design
-C_BG = "#0F0F1A"
-C_SIDEBAR = "#13131F"
-C_CARD = "#1E1E30"
-C_CARD_HOVER = "#262640"
-C_ACCENT = "#7C3AED"
-C_ACCENT2 = "#3B82F6"
-C_ACCENT_GRAD = "#6366F1"
-C_TEXT = "#FFFFFF"
-C_TEXT_DIM = "#9CA3AF"
-C_SUCCESS = "#10B981"
-C_WARNING = "#F59E0B"
-C_DANGER = "#EF4444"
-C_PURPLE = "#A78BFA"
-C_BLUE = "#60A5FA"
-C_TEAL = "#2DD4BF"
-C_PINK = "#F472B6"
-C_YELLOW = "#FBBF24"
+# ==================== DATABASE HELPERS ====================
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-DEFAULT_DATA = {
-    "user": {"name": "Kath", "course": "BSIT Student", "username": "kath", "password": "1234"},
-    "schedule": [
-        {"time": "7:00 - 8:30 AM", "subject": "Mathematics", "room": "Room 201", "color": C_PURPLE},
-        {"time": "9:00 - 10:30 AM", "subject": "Programming", "room": "Room 305", "color": C_BLUE},
-        {"time": "1:00 - 2:30 PM", "subject": "Networking", "room": "Room 102", "color": C_TEAL},
-    ],
-    "deadlines": [
-        {"title": "Programming Assignment", "due": "Apr 30, 2025", "days_left": 2, "color": C_PINK},
-        {"title": "Group Project (Final Report)", "due": "May 2, 2025", "days_left": 4, "color": C_PURPLE},
-        {"title": "Math Quiz", "due": "May 5, 2025", "days_left": 7, "color": C_YELLOW},
-    ],
-    "tasks": [
-        {"id": 1, "title": "Programming Assignment", "due": "Apr 30, 2025", "category": "Schoolwork", "done": False, "overdue": False},
-        {"id": 2, "title": "Group Project (Final Report)", "due": "May 2, 2025", "category": "Project", "done": False, "overdue": False},
-        {"id": 3, "title": "Math Quiz Review", "due": "May 5, 2025", "category": "Review", "done": False, "overdue": False},
-        {"id": 4, "title": "Networking Lab Report", "due": "Apr 25, 2025", "category": "Schoolwork", "done": True, "overdue": False},
-        {"id": 5, "title": "Essay in English", "due": "Apr 20, 2025", "category": "Schoolwork", "done": True, "overdue": False},
-        {"id": 6, "title": "PE Activity Output", "due": "Apr 15, 2025", "category": "Requirement", "done": True, "overdue": False},
-        {"id": 7, "title": "Research Paper Draft", "due": "Apr 10, 2025", "category": "Project", "done": True, "overdue": True},
-        {"id": 8, "title": "Science Experiment Log", "due": "Apr 8, 2025", "category": "Requirement", "done": False, "overdue": True},
-    ],
-    "grades": [
-        {"subject": "Mathematics", "units": 3, "grade": 1.75},
-        {"subject": "Programming", "units": 3, "grade": 1.50},
-        {"subject": "Networking", "units": 3, "grade": 2.00},
-        {"subject": "English", "units": 3, "grade": 1.25},
-        {"subject": "Physical Education", "units": 2, "grade": 1.00},
-        {"subject": "Science", "units": 3, "grade": 2.25},
-    ],
-    "budget": {"balance": 1250.00, "income": 5000.00, "expenses": 3750.00,
-               "transactions": [
-                   {"type": "Income", "desc": "Allowance", "amount": 5000.00, "date": "Apr 1, 2025"},
-                   {"type": "Expense", "desc": "School Supplies", "amount": 450.00, "date": "Apr 5, 2025"},
-                   {"type": "Expense", "desc": "Food", "amount": 1800.00, "date": "Apr 10, 2025"},
-                   {"type": "Expense", "desc": "Transportation", "amount": 800.00, "date": "Apr 15, 2025"},
-                   {"type": "Expense", "desc": "Project Materials", "amount": 700.00, "date": "Apr 20, 2025"},
-               ]},
-    "notes": [
-        {"title": "Programming Notes", "content": "OOP concepts: Encapsulation, Inheritance, Polymorphism, Abstraction.\n\n- Class = blueprint\n- Object = instance of class\n- Use __init__ as constructor in Python"},
-        {"title": "Math Formulas", "content": "Quadratic: x = (-b ± sqrt(b²-4ac)) / 2a\nSlope: m = (y2-y1)/(x2-x1)\nArea of circle: A = πr²"},
-    ],
-    "projects": [
-        {"name": "Capstone Project", "members": "Kath, John, Mae", "progress": 65, "deadline": "May 15, 2025"},
-        {"name": "Research Paper", "members": "Kath, Luis", "progress": 40, "deadline": "May 30, 2025"},
-        {"name": "System Integration", "members": "Kath, John, Mae, Luis", "progress": 80, "deadline": "May 10, 2025"},
-    ],
-    "exams": [
-        {"subject": "Mathematics", "date": "2025-05-10"},
-        {"subject": "Programming", "date": "2025-05-12"},
-        {"subject": "Networking", "date": "2025-05-15"},
-    ],
-    "calendar_events": {
-        "2025-04-29": ["Mathematics 7AM", "Programming 9AM", "Networking 1PM"],
-        "2025-04-30": ["Programming Assignment Due"],
-        "2025-05-02": ["Group Project Final Report Due"],
-        "2025-05-05": ["Math Quiz"],
-    },
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Users table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT UNIQUE NOT NULL,
+            full_name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            student_id TEXT,
+            course_year TEXT,
+            password_hash TEXT NOT NULL,
+            join_date TEXT NOT NULL,
+            is_premium INTEGER DEFAULT 0,
+            premium_start TEXT,
+            premium_expiry TEXT,
+            theme TEXT DEFAULT 'light'
+        )
+    """)
+
+    # Tasks table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            subject TEXT,
+            description TEXT,
+            due_date TEXT NOT NULL,
+            due_time TEXT DEFAULT '23:59',
+            priority TEXT DEFAULT 'medium',
+            completed INTEGER DEFAULT 0,
+            reminder_set INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    # Schedule table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS schedule (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            day TEXT NOT NULL,
+            time_start TEXT NOT NULL,
+            time_end TEXT NOT NULL,
+            room TEXT,
+            color TEXT DEFAULT '#6366F1'
+        )
+    """)
+
+    # Notes table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT,
+            folder_name TEXT DEFAULT 'General',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+    # Projects table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            members TEXT,
+            deadline TEXT,
+            status TEXT DEFAULT 'Ongoing',
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    # Grades table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS grades (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            score REAL NOT NULL,
+            units REAL DEFAULT 3,
+            semester TEXT,
+            recorded_at TEXT NOT NULL
+        )
+    """)
+
+    # Budget table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS budget (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            category TEXT NOT NULL,
+            amount REAL NOT NULL,
+            description TEXT,
+            recorded_at TEXT NOT NULL
+        )
+    """)
+
+    # Study Planner table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS planner (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            goal TEXT NOT NULL,
+            target_date TEXT,
+            progress INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    # Payment requests table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            amount REAL NOT NULL,
+            reference_id TEXT UNIQUE NOT NULL,
+            status TEXT DEFAULT 'pending',
+            sent_at TEXT,
+            activated_at TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def get_ph_time():
+    return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
+
+def format_date(dt):
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+def check_premium_status(user_id):
+    """Check and update if premium is expired"""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT is_premium, premium_expiry FROM users WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return False
+    
+    is_premium = row['is_premium']
+    expiry_str = row['premium_expiry']
+    
+    if is_premium and expiry_str:
+        expiry = datetime.datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+        now = get_ph_time().replace(tzinfo=None)
+        if now > expiry:
+            cur.execute("UPDATE users SET is_premium = 0, premium_start = NULL, premium_expiry = NULL WHERE user_id = ?", (user_id,))
+            conn.commit()
+            conn.close()
+            return False
+    
+    conn.close()
+    return bool(is_premium)
+
+def get_user_data(user_id):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    user = cur.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+# ==================== ROUTES ====================
+@app.route('/')
+def index():
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'GET':
+        return render_template_string(FRONTEND_HTML, page='register')
+    
+    data = request.get_json()
+    required = ['full_name', 'email', 'student_id', 'course_year', 'password']
+    for field in required:
+        if not data.get(field, '').strip():
+            return jsonify({'success': False, 'error': 'All fields are required'})
+    
+    if data['password'] != data.get('confirm_password', ''):
+        return jsonify({'success': False, 'error': 'Passwords do not match'})
+    
+    if len(data['password']) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        user_id = str(uuid.uuid4())[:8]
+        now = format_date(get_ph_time())
+        cur.execute("""
+            INSERT INTO users (user_id, full_name, email, student_id, course_year, password_hash, join_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, data['full_name'].strip(), data['email'].strip().lower(), 
+              data['student_id'].strip(), data['course_year'].strip(), 
+              hash_password(data['password']), now))
+        conn.commit()
+        session['user_id'] = user_id
+        return jsonify({'success': True, 'user_id': user_id})
+    except sqlite3.IntegrityError:
+        return jsonify({'success': False, 'error': 'Email already registered'})
+    finally:
+        conn.close()
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template_string(FRONTEND_HTML, page='login')
+    
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+    remember = data.get('remember', False)
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user = cur.fetchone()
+    conn.close()
+    
+    if not user or user['password_hash'] != hash_password(password):
+        return jsonify({'success': False, 'error': 'Invalid email or password'})
+    
+    session['user_id'] = user['user_id']
+    if not remember:
+        session.permanent = False
+    
+    return jsonify({'success': True, 'user_id': user['user_id'], 'name': user['full_name']})
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template_string(FRONTEND_HTML, page='dashboard')
+
+@app.route('/api/user', methods=['GET'])
+def get_user():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    user = get_user_data(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    is_premium = check_premium_status(user_id)
+    expiry = user.get('premium_expiry') if is_premium else None
+    
+    return jsonify({
+        'full_name': user['full_name'],
+        'email': user['email'],
+        'student_id': user['student_id'],
+        'course_year': user['course_year'],
+        'join_date': user['join_date'],
+        'is_premium': is_premium,
+        'premium_expiry': expiry,
+        'theme': user.get('theme', 'light')
+    })
+
+@app.route('/api/user/theme', methods=['POST'])
+def set_theme():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.get_json()
+    theme = data.get('theme', 'light')
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET theme = ? WHERE user_id = ?", (theme, session['user_id']))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+# ==================== PREMIUM & PAYMENT SYSTEM ====================
+@app.route('/api/premium/request', methods=['POST'])
+def request_premium():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    reference_id = f"TH-{session['user_id']}-{str(uuid.uuid4())[:6].upper()}"
+    now = format_date(get_ph_time())
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO payments (user_id, amount, reference_id, status, sent_at)
+        VALUES (?, ?, ?, 'pending', ?)
+    """, (session['user_id'], PREMIUM_PRICE, reference_id, now))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'reference_id': reference_id,
+        'amount': PREMIUM_PRICE,
+        'gcash_number': GCASH_NUMBER,
+        'gcash_name': GCASH_NAME
+    })
+
+@app.route('/api/premium/confirm-payment', methods=['POST'])
+def confirm_payment():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    reference_id = data.get('reference_id', '')
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Check if reference exists and belongs to this user
+    cur.execute("SELECT * FROM payments WHERE reference_id = ? AND user_id = ?", 
+                (reference_id, session['user_id']))
+    payment = cur.fetchone()
+    
+    if not payment:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Reference ID not found'})
+    
+    if payment['status'] == 'activated':
+        conn.close()
+        return jsonify({'success': True, 'message': 'Already activated'})
+    
+    # Mark as waiting for admin approval
+    cur.execute("UPDATE payments SET status = 'waiting' WHERE reference_id = ?", (reference_id,))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'message': 'Payment submitted! Please wait for admin confirmation (usually within 24 hours).'
+    })
+
+@app.route('/api/premium/status', methods=['GET'])
+def premium_status():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    is_premium = check_premium_status(session['user_id'])
+    user = get_user_data(session['user_id'])
+    
+    days_left = 0
+    if is_premium and user.get('premium_expiry'):
+        expiry = datetime.datetime.strptime(user['premium_expiry'], "%Y-%m-%d %H:%M:%S")
+        now = get_ph_time().replace(tzinfo=None)
+        days_left = (expiry - now).days
+    
+    # Get latest payment
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM payments WHERE user_id = ? ORDER BY id DESC LIMIT 1", 
+                (session['user_id'],))
+    payment = cur.fetchone()
+    conn.close()
+    
+    return jsonify({
+        'is_premium': is_premium,
+        'days_left': days_left,
+        'expiry_date': user.get('premium_expiry') if is_premium else None,
+        'latest_payment': dict(payment) if payment else None,
+        'price': PREMIUM_PRICE
+    })
+
+# ==================== TASKS API ====================
+@app.route('/api/tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def tasks():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    conn = get_db()
+    cur = conn.cursor()
+    
+    if request.method == 'GET':
+        cur.execute("SELECT * FROM tasks WHERE user_id = ? ORDER BY due_date ASC, priority DESC", (user_id,))
+        tasks = cur.fetchall()
+        conn.close()
+        return jsonify([dict(t) for t in tasks])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        now = format_date(get_ph_time())
+        cur.execute("""
+            INSERT INTO tasks (user_id, title, subject, description, due_date, due_time, priority, reminder_set, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, data['title'], data.get('subject',''), data.get('description',''), 
+              data['due_date'], data.get('due_time','23:59'), data.get('priority','medium'),
+              1 if data.get('reminder_set') else 0, now))
+        conn.commit()
+        task_id = cur.lastrowid
+        conn.close()
+        return jsonify({'success': True, 'id': task_id})
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        cur.execute("UPDATE tasks SET completed = ? WHERE id = ? AND user_id = ?", 
+                    (data.get('completed', 0), data['id'], user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    
+    elif request.method == 'DELETE':
+        task_id = request.args.get('id')
+        cur.execute("DELETE FROM tasks WHERE id = ? AND user_id = ?", (task_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+# ==================== SCHEDULE API ====================
+@app.route('/api/schedule', methods=['GET', 'POST', 'DELETE'])
+def schedule():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    conn = get_db()
+    cur = conn.cursor()
+    
+    if request.method == 'GET':
+        cur.execute("SELECT * FROM schedule WHERE user_id = ? ORDER BY time_start", (user_id,))
+        items = cur.fetchall()
+        conn.close()
+        return jsonify([dict(s) for s in items])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        cur.execute("""
+            INSERT INTO schedule (user_id, subject, day, time_start, time_end, room, color)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, data['subject'], data['day'], data['time_start'], 
+              data['time_end'], data.get('room',''), data.get('color','#6366F1')))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    
+    elif request.method == 'DELETE':
+        item_id = request.args.get('id')
+        cur.execute("DELETE FROM schedule WHERE id = ? AND user_id = ?", (item_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+# ==================== NOTES API ====================
+@app.route('/api/notes', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def notes():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    conn = get_db()
+    cur = conn.cursor()
+    now = format_date(get_ph_time())
+    
+    if request.method == 'GET':
+        cur.execute("SELECT * FROM notes WHERE user_id = ? ORDER BY updated_at DESC", (user_id,))
+        items = cur.fetchall()
+        conn.close()
+        return jsonify([dict(n) for n in items])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        cur.execute("""
+            INSERT INTO notes (user_id, title, content, folder_name, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, data['title'], data.get('content',''), data.get('folder_name','General'), now, now))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    
+    elif request.method == 'DELETE':
+        note_id = request.args.get('id')
+        cur.execute("DELETE FROM notes WHERE id = ? AND user_id = ?", (note_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+# ==================== PROJECTS API ====================
+@app.route('/api/projects', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def projects():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    conn = get_db()
+    cur = conn.cursor()
+    now = format_date(get_ph_time())
+    
+    if request.method == 'GET':
+        cur.execute("SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+        items = cur.fetchall()
+        conn.close()
+        return jsonify([dict(p) for p in items])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        cur.execute("""
+            INSERT INTO projects (user_id, name, members, deadline, status, created_at)
+            VALUES (?, ?, ?, ?, 'Ongoing', ?)
+        """, (user_id, data['name'], data.get('members',''), data.get('deadline',''), now))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    
+    elif request.method == 'PUT':
+        data = request.get_json()
+        cur.execute("UPDATE projects SET status = ? WHERE id = ? AND user_id = ?", 
+                    (data['status'], data['id'], user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    
+    elif request.method == 'DELETE':
+        proj_id = request.args.get('id')
+        cur.execute("DELETE FROM projects WHERE id = ? AND user_id = ?", (proj_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+# ==================== GRADES API ====================
+@app.route('/api/grades', methods=['GET', 'POST', 'DELETE'])
+def grades():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
+    conn = get_db()
+    cur = conn.cursor()
+    now = format_date(get_ph_time())
+    
+    if request.method == 'GET':
+        cur.execute("SELECT * FROM grades WHERE user_id = ? ORDER BY recorded_at DESC", (user_id,))
+        items = cur.fetchall()
+        conn.close()
+        return jsonify([dict(g) for g in items])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        cur.execute("""
+            INSERT INTO grades (user_id, subject, score, units, semester, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, data['subject'], data['score'], data.get('units', 3), 
+              data.get('semester',''), now))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    
+    elif request.method == 'DELETE':
+        grade_id = request.args.get('id')
+        cur.execute("DELETE FROM grades WHERE id = ? AND user_id = ?", (grade_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+# ==================== BUDGET API (PREMIUM ONLY) ====================
+@app.route('/api/budget', methods=['GET', 'POST', 'DELETE'])
+def budget():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    if not check_premium_status(session['user_id']):
+        return jsonify({'error': 'Premium required', 'premium_required': True}), 403
+    
+    user_id = session['user_id']
+    conn = get_db()
+    cur = conn.cursor()
+    now = format_date(get_ph_time())
+    
+    if request.method == 'GET':
+        cur.execute("SELECT * FROM budget WHERE user_id = ? ORDER BY recorded_at DESC", (user_id,))
+        items = cur.fetchall()
+        conn.close()
+        return jsonify([dict(b) for b in items])
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        cur.execute("""
+            INSERT INTO budget (user_id, type, category, amount, description, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (user_id, data['type'], data['category'], data['amount'], 
+              data.get('description',''), now))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    
+    elif request.method == 'DELETE':
+        item_id = request.args.get('id')
+        cur.execute("DELETE FROM budget WHERE id = ? AND user_id = ?", (item_id, user_id))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+# ==================== FRONTEND HTML ====================
+FRONTEND_HTML = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TaskHive — Plan • Study • Achieve</title>
+<style>
+:root {
+    --bg: #EFF6FF; --card: #FFFFFF; --text: #0F172A; --muted: #64748B;
+    --primary: #6366F1; --secondary: #3B82F6; --accent: #8B5CF6;
+    --success: #10B981; --warning: #F59E0B; --danger: #EF4444;
+    --border: #E2E8F0; --shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+    --gradient: linear-gradient(135deg, #6366F1 0%, #3B82F6 100%);
+}
+.dark {
+    --bg: #0F172A; --card: #1E293B; --text: #FFFFFF; --muted: #94A3B8;
+    --border: #334155; --shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+* {margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif;}
+body {background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s ease;}
+.app-container {max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--bg); position: relative;}
+
+/* Auth Pages */
+.auth-page {min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 24px; background: var(--gradient);}
+.auth-card {background: var(--card); padding: 32px 24px; border-radius: 20px; box-shadow: var(--shadow);}
+.auth-logo {text-align: center; margin-bottom: 24px;}
+.auth-logo h1 {font-size: 28px; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+.auth-logo p {color: var(--muted); font-size: 14px; margin-top: 4px;}
+.form-group {margin-bottom: 16px;}
+.form-group label {display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: var(--text);}
+.form-group input, .form-group select, .form-group textarea {width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; background: transparent; color: var(--text);}
+.form-group input:focus {outline: none; border-color: var(--primary);}
+.btn {width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;}
+.btn:hover {opacity: 0.92;}
+.btn-primary {background: var(--gradient); color: white;}
+.btn-outline {background: transparent; border: 1px solid var(--primary); color: var(--primary);}
+.btn-success {background: var(--success); color: white;}
+.btn-danger {background: var(--danger); color: white;}
+.btn-sm {padding: 8px 14px; font-size: 14px; width: auto;}
+.link {text-align: center; margin-top: 16px; font-size: 14px; color: var(--muted);}
+.link a {color: var(--primary); text-decoration: none; font-weight: 500;}
+.error-text {color: var(--danger); font-size: 13px; margin-top: 6px; display: none;}
+.error-text.show {display: block;}
+
+/* Main Layout */
+.header {background: var(--card); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100;}
+.header h2 {font-size: 18px; font-weight: 600;}
+.menu-btn {background: none; border: none; font-size: 24px; color: var(--text); cursor: pointer;}
+
+/* Sidebar */
+.sidebar-overlay {position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none;}
+.sidebar-overlay.show {display: block;}
+.sidebar {position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: var(--card); z-index: 300; transform: translateX(-100%); transition: transform 0.3s ease; overflow-y: auto;}
+.sidebar.show {transform: translateX(0);}
+.sidebar-close {text-align: right; padding: 16px 20px 0;}
+.sidebar-close button {background: none; border: none; font-size: 22px; color: var(--muted); cursor: pointer;}
+.sidebar-profile {padding: 20px; border-bottom: 1px solid var(--border);}
+.sidebar-profile h3 {font-size: 17px; margin-bottom: 4px;}
+.sidebar-profile p {font-size: 13px; color: var(--muted); margin-bottom: 8px;}
+.premium-badge {display: inline-block; background: linear-gradient(135deg, #F59E0B, #D97706); color: white; font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 600; margin-bottom: 6px;}
+.sidebar-menu {padding: 12px 0;}
+.sidebar-item {display: flex; align-items: center; gap: 12px; padding: 14px 20px; color: var(--text); text-decoration: none; font-size: 15px; cursor: pointer; transition: background 0.15s;}
+.sidebar-item:hover {background: rgba(99, 102, 241, 0.08);}
+.sidebar-item.locked {opacity: 0.5;}
+.sidebar-item .lock {margin-left: auto; font-size: 14px; color: var(--muted);}
+
+/* Content */
+.content {padding: 20px; padding-bottom: 90px;}
+.page {display: none; animation: fadeIn 0.3s ease;}
+.page.active {display: block;}
+@keyframes fadeIn {from {opacity: 0; transform: translateY(8px);} to {opacity: 1; transform: translateY(0);}}
+.greeting {font-size: 22px; font-weight: 700; margin-bottom: 4px;}
+.quote {font-size: 13px; color: var(--muted); margin-bottom: 24px; font-style: italic;}
+.card {background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow);}
+.card h3 {font-size: 15px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;}
+.card h3 span {font-size: 12px; color: var(--primary); cursor: pointer;}
+.task-item {padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px;}
+.task-item:last-child {border-bottom: none;}
+.task-priority {width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;}
+.priority-high {background: var(--danger);}
+.priority-medium {background: var(--warning);}
+.priority-low {background: var(--success);}
+.task-text {flex: 1;}
+.task-title {font-size: 15px; font-weight: 500;}
+.task-title.completed {text-decoration: line-through; color: var(--muted);}
+.task-meta {font-size: 12px; color: var(--muted); margin-top: 2px;}
+.task-due {font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px;}
+.due-today {background: rgba(245, 158, 11, 0.15); color: var(--warning);}
+.due-overdue {background: rgba(239, 68, 68, 0.1); color: var(--danger);}
+.due-later {background: rgba(16, 185, 129, 0.1); color: var(--success);}
+.task-actions {display: flex; gap: 6px; flex-shrink: 0;}
+.task-actions button {background: none; border: none; font-size: 16px; cursor: pointer; padding: 2px 6px;}
+.stats-grid {display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;}
+.stat-circle {width: 60px; height: 60px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto 6px; position: relative;}
+.stat-circle span {font-size: 16px; font-weight: 700; z-index: 2;}
+.stat-label {font-size: 11px; color: var(--muted);}
+.quick-grid {display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;}
+.quick-btn {display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 8px; background: var(--card); border-radius: 12px; text-decoration: none; color: var(--text); font-size: 12px; box-shadow: var(--shadow); border: none; cursor: pointer; transition: transform 0.15s;}
+.quick-btn:hover {transform: translateY(-2px);}
+.quick-btn span {font-size: 22px;}
+.quick-btn.locked {opacity: 0.5; position: relative;}
+.quick-btn.locked::after {content: "🔒"; position: absolute; top: 4px; right: 4px; font-size: 12px;}
+
+/* Bottom Nav */
+.bottom-nav {position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); max-width: 480px; width: 100%; background: var(--card); display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 150;}
+.nav-item {display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); text-decoration: none; font-size: 11px; cursor: pointer;}
+.nav-item.active {color: var(--primary);}
+.nav-item span {font-size: 20px;}
+
+/* Modal */
+.modal-overlay {position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px;}
+.modal-overlay.show {display: flex;}
+.modal {background: var(--card); border-radius: 20px; padding: 24px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto;}
+.modal h2 {font-size: 20px; margin-bottom: 16px; text-align: center;}
+.modal-actions {display: flex; gap: 10px; margin-top: 20px;}
+.modal-actions button {flex: 1;}
+.qr-code {width: 180px; height: 180px; background: #F3F4F6; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 16px auto; font-size: 60px;}
+.premium-features {margin: 16px 0;}
+.premium-features p {padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--border);}
+.countdown-box {background: linear-gradient(135deg, #F59E0B, #D97706); color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: 600; margin: 12px 0;}
+.hidden {display: none !important;}
+input[type="checkbox"] {width: auto; margin-right: 8px;}
+.empty-state {text-align: center; padding: 40px 20px; color: var(--muted);}
+.empty-state span {font-size: 48px; display: block; margin-bottom: 12px; opacity: 0.5;}
+'''
+
+# Continue the rest of the HTML template
+FRONTEND_HTML += '''
+</style>
+</head>
+<body>
+<div class="app-container" id="app">
+    <!-- AUTH PAGES -->
+    <div id="authSection" style="display: block;">
+        <div id="loginPage" class="auth-page" style="display: none;">
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <h1>🐝 TaskHive</h1>
+                    <p>Plan • Study • Achieve</p>
+                </div>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="you@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter password" required>
+                    </div>
+                    <label style="display: flex; align-items: center; margin-bottom: 16px; font-size: 14px;">
+                        <input type="checkbox" id="rememberMe"> Remember me
+                    </label>
+                    <div class="error-text" id="loginError"></div>
+                    <button type="submit" class="btn btn-primary">Log In</button>
+                </form>
+                <div class="link">
+                    Don't have an account? <a href="#" onclick="showPage('register')">Sign Up</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="registerPage" class="auth-page" style="display: none;">
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <h1>🐝 Join TaskHive</h1>
+                    <p>Start organizing your study life today!</p>
+                </div>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="regName" placeholder="Juan Dela Cruz" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="regEmail" placeholder="you@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Student ID</label>
+                        <input type="text" id="regStudentId" placeholder="e.g. 2023-12345" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Course & Year</label>
+                        <input type="text" id="regCourse" placeholder="BS Computer Science - 2nd Year" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="regPassword" placeholder="At least 6 characters" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <input type="password" id="regConfirmPass" placeholder="Re-enter password" required>
+                    </div>
+                    <div class="error-text" id="regError"></div>
+                    <button type="submit" class="btn btn-primary">Create Account</button>
+                </form>
+                <div class="link">
+                    Already have an account? <a href="#" onclick="showPage('login')">Log In</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="mainApp" style="display: none;">
+        <!-- Header -->
+        <div class="header">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <h2 id="pageTitle">Dashboard</h2>
+            <span></span>
+        </div>
+
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-close">
+                <button onclick="toggleSidebar()">×</button>
+            </div>
+            <div class="sidebar-profile">
+                <h3 id="sidebarName">User Name</h3>
+                <p id="sidebarCourse">Course & Year</p>
+                <div id="sidebarPremiumBadge" class="premium-badge" style="display: none;">👑 Premium</div>
+                <p id="sidebarExpiry" style="font-size: 11px; color: var(--muted);"></p>
+            </div>
+            <div class="sidebar-menu">
+                <div class="sidebar-item" onclick="navigateTo('dashboard')">🏠 Dashboard</div>
+                <div class="sidebar-item" onclick="navigateTo('tasks')">✅ My Tasks</div>
+                <div class="sidebar-item" onclick="navigateTo('schedule')">📅 Schedule</div>
+                <div class="sidebar-item" onclick="navigateTo('notes')">📝 Notes</div>
+                <div class="sidebar-item" onclick="navigateTo('projects')">👥 Projects</div>
+                <div class="sidebar-item" onclick="navigateTo('grades')">📊 Grades</div>
+                <div class="sidebar-item" id="menuBudget" onclick="navigateTo('budget')">💰 Budget Tracker <span class="lock">🔒</span></div>
+                <div class="sidebar-item" onclick="navigateTo('planner')">📈 Study Planner</div>
+                <div class="sidebar-item" id="menuPremium" onclick="navigateTo('premium')">✨ Premium Features</div>
+                <div class="sidebar-item" onclick="navigateTo('settings')">⚙️ Settings</div>
+                <div class="sidebar-item" style="color: var(--danger);" onclick="logout()">🚪 Log Out</div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- DASHBOARD -->
+            <div id="pageDashboard" class="page active">
+                <h2 class="greeting" id="greeting">Good Morning!</h2>
+                <p class="quote" id="dailyQuote">"Your future is created by what you do today, not tomorrow."</p>
+
+                <!-- Today's Schedule -->
+                <div class="card">
+                    <h3>📅 Today's Schedule</h3>
+                    <div id="todayScheduleList">
+                        <div class="empty-state"><span>📭</span>No classes today. Enjoy your time!</div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Deadlines -->
+                <div class="card">
+                    <h3>⏰ Upcoming Deadlines</h3>
+                    <div id="upcomingTasksList">
+                        <div class="empty-state"><span>🎉</span>No upcoming deadlines. You're all caught up!</div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="card">
+                    <h3>📊 Quick Stats</h3>
+                    <div class="stats-grid">
+                        <div>
+                            <div class="stat-circle" style="background: conic-gradient(var(--primary) 0% 0%, var(--border) 0% 100%);">
+                                <span id="statPercent">0%</span>
+                            </div>
+                            <div class="stat-label">Complete</div>
+                        </div>
+                        <div>
+                            <div class="stat-circle" style="background: var(--card); border: 3px solid var(--success);">
+                                <span id="statDone">0</span>
+                            </div>
+                            <div class="stat-label">Done</div>
+                        </div>
+                        <div>
+                            <div class="stat-circle" style="background: var(--card); border: 3px solid var(--warning);">
+                                <span id="statPending">0</span>
+                            </div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                        <div>
+                            <div class="stat-circle" style="background: var(--card); border: 3px solid var(--danger);">
+                                <span id="statOverdue">0</span>
+                            </div>
+                            <div class="stat-label">Overdue</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <h3>⚡ Quick Actions</h3>
+                    <div class="quick-grid">
+                        <button class="quick-btn" onclick="showAddTaskModal()"><span>➕</span>Add Task</button>
+                        <button class="quick-btn" onclick="navigateTo('schedule')"><span>📆</span>Schedule</button>
+                        <button class="quick-btn" onclick="navigateTo('planner')"><span>🎯</span>Planner</button>
+                        <button class="quick-btn locked" onclick="showPremiumModal()"><span>⏱️</span>Focus</button>
+                        <button class="quick-btn locked" onclick="showPremiumModal()"><span>🤖</span>AI Help</button>
+                        <button class="quick-btn locked" onclick="showPremiumModal()"><span>🔔</span>Remind</button>
+                        <button class="quick-btn locked" onclick="showPremiumModal()"><span>♻️</span>Recover</button>
+                        <button class="quick-btn locked" onclick="showPremiumModal()"><span>📄</span>Export</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TASKS -->
+            <div id="pageTasks" class="page">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 20px;">✅ My Tasks</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showAddTaskModal()">+ Add Task</button>
+                </div>
+                <div id="allTasksList"></div>
+            </div>
+
+            <!-- SCHEDULE -->
+            <div id="pageSchedule" class="page">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 20px;">📅 Class Schedule</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showAddScheduleModal()">+ Add</button>
+                </div>
+                <div id="scheduleList"></div>
+            </div>
+
+            <!-- NOTES -->
+            <div id="pageNotes" class="page">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 20px;">📝 Notes</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showAddNoteModal()">+ Note</button>
+                </div>
+                <div id="notesList"></div>
+            </div>
+
+            <!-- PROJECTS -->
+            <div id="pageProjects" class="page">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 20px;">👥 Group Projects</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showAddProjectModal()">+ Project</button>
+                </div>
+                <div id="projectsList"></div>
+            </div>
+<!-- GRADES -->
+            <div id="pageGrades" class="page">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 20px;">📊 Grades & GPA</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showAddGradeModal()">+ Grade</button>
+                </div>
+                <div class="card">
+                    <h3>📈 GPA Summary</h3>
+                    <div style="text-align: center; padding: 10px 0;">
+                        <div style="font-size: 42px; font-weight: 700; color: var(--primary);" id="gpaDisplay">--</div>
+                        <div style="font-size: 14px; color: var(--muted);">Current GPA</div>
+                    </div>
+                </div>
+                <div id="gradesList"></div>
+            </div>
+
+            <!-- BUDGET TRACKER (PREMIUM ONLY) -->
+            <div id="pageBudget" class="page">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 20px;">💰 Budget Tracker</h2>
+                    <button class="btn btn-primary btn-sm" id="addBudgetBtn" onclick="showAddBudgetModal()">+ Entry</button>
+                </div>
+                <div class="card">
+                    <h3>💵 Balance</h3>
+                    <div style="text-align: center; padding: 10px 0;">
+                        <div style="font-size: 32px; font-weight: 700;" id="budgetBalance">₱0.00</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-around; margin-top: 10px;">
+                        <div style="text-align: center;">
+                            <div style="color: var(--success); font-weight: 600;" id="totalIncome">+₱0.00</div>
+                            <div style="font-size: 12px; color: var(--muted);">Income</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="color: var(--danger); font-weight: 600;" id="totalExpense">-₱0.00</div>
+                            <div style="font-size: 12px; color: var(--muted);">Expense</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="budgetList"></div>
+            </div>
+
+            <!-- STUDY PLANNER -->
+            <div id="pagePlanner" class="page">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 20px;">📈 Study Planner</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showAddGoalModal()">+ Goal</button>
+                </div>
+                <div id="goalsList"></div>
+            </div>
+
+            <!-- PREMIUM PAGE -->
+            <div id="pagePremium" class="page">
+                <div style="text-align: center; padding: 10px 0 20px;">
+                    <h2 style="font-size: 24px; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">👑 Unlock TaskHive Premium</h2>
+                    <p style="color: var(--muted); margin-top: 6px;">Get the full TaskHive experience</p>
+                </div>
+
+                <div class="card" id="premiumStatusCard">
+                    <h3>Your Subscription</h3>
+                    <div id="premiumInactive" style="text-align: center; padding: 10px 0;">
+                        <p style="color: var(--muted);">You are currently on the <strong>Free Plan</strong></p>
+                        <div class="countdown-box">
+                            <div style="font-size: 24px; font-weight: 700;">₱50.00</div>
+                            <div style="font-size: 13px; opacity: 0.9;">per month — Auto-renewing every 30 days</div>
+                        </div>
+                    </div>
+                    <div id="premiumActive" style="display: none; text-align: center; padding: 10px 0;">
+                        <div style="font-size: 22px;">✅</div>
+                        <p style="color: var(--success); font-weight: 600;">Premium Activated!</p>
+                        <p style="font-size: 13px; color: var(--muted);" id="premiumExpiryText">Valid until: --</p>
+                        <div class="countdown-box" id="premiumCountdown">
+                            Your Premium expires in: <strong>-- days</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>💳 Pay via GCash</h3>
+                    <div class="qr-code">📱</div>
+                    <p style="text-align: center; font-size: 14px; margin-bottom: 12px;">
+                        <strong>GCash Number:</strong> 0917-123-4567<br>
+                        <strong>Name:</strong> Juan Dela Cruz<br>
+                        <strong>Amount:</strong> ₱50.00
+                    </p>
+                    <ol style="font-size: 14px; line-height: 1.8; color: var(--muted); padding-left: 20px;">
+                        <li>Send exactly <strong>₱50.00</strong> to the GCash number above</li>
+                        <li>Copy your <strong>Reference Number</strong> from GCash</li>
+                        <li>Paste it below and click "I Have Sent Payment"</li>
+                    </ol>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label>Reference ID</label>
+                        <input type="text" id="refIdDisplay" readonly style="background: var(--border);">
+                        <small style="color: var(--muted); font-size: 12px;">Use this Reference ID when sending payment</small>
+                    </div>
+                    <button class="btn btn-primary" onclick="generateReference()">🔄 Generate Reference ID</button>
+                    <button class="btn btn-success" style="margin-top: 10px;" onclick="submitPaymentConfirmation()">✅ I Have Sent Payment</button>
+                    <p id="paymentStatusText" style="text-align: center; margin-top: 12px; font-size: 14px;"></p>
+                </div>
+
+                <div class="card">
+                    <h3>✨ Premium Features</h3>
+                    <div class="premium-features">
+                        <p>✅ Deadline Reminders — custom alerts for tasks</p>
+                        <p>✅ Missed Task Recovery — reschedule overdue tasks</p>
+                        <p>✅ Export Reports — PDF/CSV download</p>
+                        <p>✅ Time Estimator — calculate study time needed</p>
+                        <p>✅ AI Study Assistant — instant study help</p>
+                        <p>✅ Exam Countdown — track exam dates</p>
+                        <p>✅ Focus Mode — distraction-free timer</p>
+                        <p>✅ Budget Tracker — manage student finances</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS -->
+            <div id="pageSettings" class="page">
+                <h2 style="font-size: 20px; margin-bottom: 16px;">⚙️ Settings</h2>
+                
+                <div class="card">
+                    <h3>🎨 Theme</h3>
+                    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                        <span>Dark Mode</span>
+                        <input type="checkbox" id="darkModeToggle" onchange="toggleTheme()">
+                    </label>
+                </div>
+
+                <div class="card">
+                    <h3>👤 Account</h3>
+                    <p><strong>Name:</strong> <span id="settingsName">--</span></p>
+                    <p><strong>Email:</strong> <span id="settingsEmail">--</span></p>
+                    <p><strong>Student ID:</strong> <span id="settingsSID">--</span></p>
+                    <p><strong>Course:</strong> <span id="settingsCourse">--</span></p>
+                    <p><strong>Member Since:</strong> <span id="settingsJoin">--</span></p>
+                </div>
+
+                <div class="card">
+                    <h3>💎 Subscription</h3>
+                    <p><strong>Plan:</strong> <span id="currentPlan">Free</span></p>
+                    <p><strong>Status:</strong> <span id="subStatus">Inactive</span></p>
+                    <button class="btn btn-primary" style="margin-top: 10px;" onclick="navigateTo('premium')">Upgrade to Premium</button>
+                </div>
+
+                <div class="card">
+                    <h3>ℹ️ About TaskHive</h3>
+                    <p style="font-size: 14px; color: var(--muted);">Version 1.0.0<br>
+                    Plan • Study • Achieve<br>
+                    Made for Filipino Students 🇵🇭</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAVIGATION -->
+        <div class="bottom-nav">
+            <div class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+                <span>🏠</span> Home
+            </div>
+            <div class="nav-item" data-page="tasks" onclick="navigateTo('tasks')">
+                <span>✅</span> Tasks
+            </div>
+            <div class="nav-item" style="transform: translateY(-10px);">
+                <button style="width: 44px; height: 44px; border-radius: 50%; background: var(--gradient); border: none; color: white; font-size: 22px; cursor: pointer;" onclick="showQuickAddModal()">+</button>
+            </div>
+            <div class="nav-item" data-page="schedule" onclick="navigateTo('schedule')">
+                <span>📅</span> Schedule
+            </div>
+            <div class="nav-item" data-page="profile" onclick="navigateTo('settings')">
+                <span>👤</span> Profile
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALS -->
+    <!-- Add Task Modal -->
+    <div class="modal-overlay" id="addTaskModal">
+        <div class="modal">
+            <h2>➕ Add New Task</h2>
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" id="taskTitle" placeholder="e.g. Math Assignment">
+            </div>
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" id="taskSubject" placeholder="e.g. Mathematics">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="taskDesc" rows="3" placeholder="Details..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Due Date *</label>
+                <input type="date" id="taskDueDate">
+            </div>
+            <div class="form-group">
+                <label>Due Time</label>
+                <input type="time" id="taskDueTime" value="23:59">
+            </div>
+            <div class="form-group">
+                <label>Priority</label>
+                <select id="taskPriority">
+                    <option value="high">🔴 High</option>
+                    <option value="medium" selected>🟡 Medium</option>
+                    <option value="low">🟢 Low</option>
+                </select>
+            </div>
+            <label style="display: flex; align-items: center; margin-bottom: 16px;">
+                <input type="checkbox" id="taskReminder"> Set Reminder (Premium)
+            </label>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('addTaskModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Schedule Modal -->
+    <div class="modal-overlay" id="addScheduleModal">
+        <div class="modal">
+            <h2>📅 Add Class Schedule</h2>
+            <div class="form-group">
+                <label>Subject *</label>
+                <input type="text" id="schSubject" placeholder="e.g. Computer Programming">
+            </div>
+            <div class="form-group">
+                <label>Day *</label>
+                <select id="schDay">
+                    <option>Monday</option>
+                    <option>Tuesday</option>
+                    <option>Wednesday</option>
+                    <option>Thursday</option>
+                    <option>Friday</option>
+                    <option>Saturday</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Start Time *</label>
+                <input type="time" id="schStart">
+            </div>
+            <div class="form-group">
+                <label>End Time *</label>
+                <input type="time" id="schEnd">
+            </div>
+            <div class="form-group">
+                <label>Room</label>
+                <input type="text" id="schRoom" placeholder="e.g. Room 302 / Online">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('addScheduleModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveSchedule()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Note Modal -->
+    <div class="modal-overlay" id="addNoteModal">
+        <div class="modal">
+            <h2>📝 Create Note</h2>
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" id="noteTitle" placeholder="Note title">
+            </div>
+            <div class="form-group">
+                <label>Folder</label>
+                <select id="noteFolder">
+                    <option value="General">📁 General</option>
+                    <option value="Reviewer">📋 Reviewer</option>
+                    <option value="Lecture">📖 Lecture</option>
+                    <option value="Personal">✏️ Personal</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Content</label>
+                <textarea id="noteContent" rows="6" placeholder="Write your notes here..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('addNoteModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveNote()">Save Note</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Project Modal -->
+    <div class="modal-overlay" id="addProjectModal">
+        <div class="modal">
+            <h2>👥 New Group Project</h2>
+            <div class="form-group">
+                <label>Project Name *</label>
+                <input type="text" id="projName" placeholder="Project title">
+            </div>
+            <div class="form-group">
+                <label>Members</label>
+                <input type="text" id="projMembers" placeholder="Names separated by comma">
+            </div>
+            <div class="form-group">
+                <label>Deadline</label>
+                <input type="date" id="projDeadline">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('addProjectModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProject()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Grade Modal -->
+    <div class="modal-overlay" id="addGradeModal">
+        <div class="modal">
+            <h2>📊 Record Grade</h2>
+            <div class="form-group">
+                <label>Subject *</label>
+                <input type="text" id="gradeSubject" placeholder="Subject name">
+            </div>
+            <div class="form-group">
+                <label>Score (0-100) *</label>
+                <input type="number" id="gradeScore" min="0" max="100" step="0.1" placeholder="85.5">
+            </div>
+            <div class="form-group">
+                <label>Units</label>
+                <input type="number" id="gradeUnits" value="3" min="1" max="6">
+            </div>
+            <div class="form-group">
+                <label>Semester</label>
+                <input type="text" id="gradeSem" placeholder="1st Sem, AY 2024-2025">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('addGradeModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveGrade()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Budget Modal -->
+    <div class="modal-overlay" id="addBudgetModal">
+        <div class="modal">
+            <h2>💰 Add Transaction</h2>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="budgType">
+                    <option value="income">📈 Income / Allowance</option>
+                    <option value="expense">📉 Expense</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" id="budgCat" placeholder="Food, Transport, School Supplies...">
+            </div>
+            <div class="form-group">
+                <label>Amount (₱) *</label>
+                <input type="number" id="budgAmt" step="1" placeholder="500">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="budgDesc" placeholder="Optional note">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('addBudgetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveBudget()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Goal Modal -->
+    <div class="modal-overlay" id="addGoalModal">
+        <div class="modal">
+            <h2>🎯 New Study Goal</h2>
+            <div class="form-group">
+                <label>Goal *</label>
+                <textarea id="goalText" rows="3" placeholder="What do you want to achieve?"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Target Date</label>
+                <input type="date" id="goalDate">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('addGoalModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveGoal()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Premium Lock Modal -->
+    <div class="modal-overlay" id="premiumLockModal">
+        <div class="modal" style="text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
+            <h2>Premium Feature</h2>
+            <p style="color: var(--muted); margin-bottom: 20px;">This feature is only available for Premium subscribers.</p>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('premiumLockModal')">Not Now</button>
+                <button class="btn btn-primary" onclick="closeModal('premiumLockModal'); navigateTo('premium');">Upgrade — ₱50/mo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Add Modal -->
+    <div class="modal-overlay" id="quickAddModal">
+        <div class="modal">
+            <h2>⚡ Quick Add</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                <button class="quick-btn" onclick="closeModal('quickAddModal'); showAddTaskModal();">
+                    <span>✅</span> Task
+                </button>
+                <button class="quick-btn" onclick="closeModal('quickAddModal'); showAddScheduleModal();">
+                    <span>📅</span> Class
+                </button>
+                <button class="quick-btn" onclick="closeModal('quickAddModal'); showAddNoteModal();">
+                    <span>📝</span> Note
+                </button>
+                <button class="quick-btn" onclick="closeModal('quickAddModal'); showAddProjectModal();">
+                    <span>👥</span> Project
+                </button>
+            </div>
+            <button class="btn btn-outline" style="margin-top: 16px;" onclick="closeModal('quickAddModal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ========== GLOBAL VARIABLES ==========
+let currentUser = null;
+let isPremium = false;
+let tasks = [];
+let schedule = [];
+let notes = [];
+let projects = [];
+let grades = [];
+let budget = [];
+let goals = [];
+let referenceId = null;
+
+// ========== INITIALIZATION ==========
+document.addEventListener('DOMContentLoaded', function() {
+    checkSession();
+    setDailyQuote();
+    setGreeting();
+});
+
+function checkSession() {
+    fetch('/api/user')
+        .then(res => {
+            if (!res.ok) throw new Error('Unauthorized');
+            return res.json();
+        })
+        .then(data => {
+            currentUser = data;
+            isPremium = data.is_premium;
+            showMainApp();
+            updateUserUI();
+            loadAllData();
+        })
+        .catch(() => {
+            showAuthPage('login');
+        });
 }
 
+function showAuthPage(page) {
+    document.getElementById('authSection').style.display = 'block';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('loginPage').style.display = page === 'login' ? 'block' : 'none';
+    document.getElementById('registerPage').style.display = page === 'register' ? 'block' : 'none';
+}
 
-def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return json.loads(json.dumps(DEFAULT_DATA))
+function showPage(pageName) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(page${pageName.charAt(0).toUpperCase() + pageName.slice(1)}).classList.add('active');
+    
+    const titles = {
+        dashboard: 'Dashboard', tasks: 'My Tasks', schedule: 'Schedule', notes: 'Notes',
+        projects: 'Projects', grades: 'Grades', budget: 'Budget Tracker',
+        planner: 'Study Planner', premium: '✨ Premium', settings: 'Settings'
+    };
+    document.getElementById('pageTitle').textContent = titles[pageName] || 'TaskHive';
+    
+    document.getElementById('sidebar').classList.remove('show');
+    document.getElementById('sidebarOverlay').classList.remove('show');
+    
+    updateBottomNav(pageName);
+}
 
+function navigateTo(pageName) {
+    if (['budget'].includes(pageName) && !isPremium) {
+        showModal('premiumLockModal');
+        return;
+    }
+    showPage(pageName);
+    if (pageName === 'premium') loadPremiumStatus();
+}
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+function showMainApp() {
+    document.getElementById('authSection').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    showPage('dashboard');
+    applyTheme(currentUser?.theme || 'light');
+}
 
+function updateUserUI() {
+    if (!currentUser) return;
+    document.getElementById('sidebarName').textContent = currentUser.full_name;
+    document.getElementById('sidebarCourse').textContent = currentUser.course_year;
+    document.getElementById('settingsName').textContent = currentUser.full_name;
+    document.getElementById('settingsEmail').textContent = currentUser.email;
+    document.getElementById('settingsSID').textContent = currentUser.student_id;
+    document.getElementById('settingsCourse').textContent = currentUser.course_year;
+    document.getElementById('settingsJoin').textContent = new Date(currentUser.join_date).toLocaleDateString('en-PH');
+    
+    updatePremiumUI();
+}
 
-# ============================================================
-# GRADUATION CAP LOGO (drawn with PIL)
-# ============================================================
-def make_grad_cap_image(size=120):
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    s = size
-    # Cap top (diamond/trapezoid)
-    cap_top = [(int(s*0.15), int(s*0.42)), (int(s*0.5), int(s*0.22)), (int(s*0.85), int(s*0.42)), (int(s*0.5), int(s*0.62))]
-    draw.polygon(cap_top, fill=(30, 30, 40, 255))
-    # Cap base (rectangle below)
-    draw.rectangle([int(s*0.32), int(s*0.55), int(s*0.68), int(s*0.78)], fill=(30, 30, 40, 255))
-    draw.rectangle([int(s*0.28), int(s*0.74), int(s*0.72), int(s*0.80)], fill=(50, 50, 65, 255))
-    # Tassel button on top
-    draw.ellipse([int(s*0.45), int(s*0.36), int(s*0.55), int(s*0.46)], fill=(245, 158, 11, 255))
-    # Tassel string + head
-    draw.line([(int(s*0.5), int(s*0.41)), (int(s*0.78), int(s*0.50))], fill=(245, 158, 11, 255), width=3)
-    draw.ellipse([int(s*0.75), int(s*0.48), int(s*0.84), int(s*0.60)], fill=(245, 158, 11, 255))
-    return img
+function updatePremiumUI() {
+    const premiumBadge = document.getElementById('sidebarPremiumBadge');
+    const expiryText = document.getElementById('sidebarExpiry');
+    const budgetMenu = document.getElementById('menuBudget');
+    const planText = document.getElementById('currentPlan');
+    const subStatus = document.getElementById('subStatus');
+    
+    if (isPremium) {
+        premiumBadge.style.display = 'block';
+        expiryText.textContent = Valid until: ${currentUser.premium_expiry ? new Date(currentUser.premium_expiry).toLocaleDateString('en-PH') : '--'};
+        budgetMenu.classList.remove('locked');
+        budgetMenu.querySelector('.lock').style.display = 'none';
+        planText.textContent = '👑 Premium';
+        subStatus.textContent = 'Active ✅';
+        subStatus.style.color = 'var(--success)';
+    } else {
+        premiumBadge.style.display = 'none';
+        expiryText.textContent = '';
+        budgetMenu.classList.add('locked');
+        budgetMenu.querySelector('.lock').style.display = 'inline';
+        planText.textContent = 'Free';
+        subStatus.textContent = 'Inactive';
+        subStatus.style.color = 'var(--muted)';
+    }
+}
 
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('show');
+    document.getElementById('sidebarOverlay').classList.toggle('show');
+}
 
-# ============================================================
-# LOADING SCREEN
-# ============================================================
-class LoadingScreen(ctk.CTkFrame):
-    def __init__(self, master, on_complete):
-        super().__init__(master, fg_color=C_BG)
-        self.on_complete = on_complete
-        self.pack(fill="both", expand=True)
+function updateBottomNav(page) {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.page === page) item.classList.add('active');
+    });
+}
 
-        # Center container
-        container = ctk.CTkFrame(self, fg_color="transparent", width=400, height=400)
-        container.place(relx=0.5, rely=0.5, anchor="center")
+// ========== THEME ==========
+function toggleTheme() {
+    const isDark = document.getElementById('darkModeToggle').checked;
+    applyTheme(isDark ? 'dark' : 'light');
+    
+    fetch('/api/user/theme', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({theme: isDark ? 'dark' : 'light'})
+    });
+}
 
-        # Canvas for animated ring + cap
-        self.canvas = tk.Canvas(container, width=300, height=300, bg=C_BG, highlightthickness=0)
-        self.canvas.pack(pady=20)
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark');
+        document.getElementById('darkModeToggle').checked = true;
+    } else {
+        document.body.classList.remove('dark');
+        document.getElementById('darkModeToggle').checked = false;
+    }
+}
 
-        # Grad cap image in center (fallback to emoji)
-        self.cap_tk = None
-        try:
-            cap_img = make_grad_cap_image(110)
-            self.cap_tk = ImageTk.PhotoImage(cap_img)
-            self.canvas.create_image(150, 150, image=self.cap_tk)
-        except Exception:
-            self.canvas.create_text(150, 150, text="🎓", font=("Arial", 60))
+// ========== GREETING & QUOTE ==========
+function setGreeting() {
+    const hour = new Date().getHours();
+    let greeting = 'Good Evening';
+    if (hour >= 5 && hour < 12) greeting = 'Good Morning';
+    else if (hour >= 12 && hour < 18) greeting = 'Good Afternoon';
+    document.getElementById('greeting').textContent = ${greeting}${currentUser ? ', ' + currentUser.full_name.split(' ')[0] : ''}!;
+}
 
-        # Loading text
-        self.label = ctk.CTkLabel(self, text="StudyMate PH", font=ctk.CTkFont(size=24, weight="bold"), text_color=C_TEXT)
-        self.label.place(relx=0.5, rely=0.72, anchor="center")
-        self.sub = ctk.CTkLabel(self, text="Plan · Study · Achieve", font=ctk.CTkFont(size=13), text_color=C_TEXT_DIM)
-        self.sub.place(relx=0.5, rely=0.77, anchor="center")
-        self.status = ctk.CTkLabel(self, text="Loading...", font=ctk.CTkFont(size=11), text_color=C_ACCENT2)
-        self.status.place(relx=0.5, rely=0.85, anchor="center")
+function setDailyQuote() {
+    const quotes = [
+        '"Your future is created by what you do today, not tomorrow."',
+        '"Study now, be proud later."',
+        '"Every expert was once a beginner."',
+        '"Dream big. Start small. But most importantly, start."',
+        '"It always seems impossible until it\'s done."'
+    ];
+    const today = new Date().getDate();
+    document.getElementById('dailyQuote').textContent = quotes[today % quotes.length];
+}
 
-        self.angle = 0
-        self.progress = 0
-        self.animate()
+// ========== MODALS ==========
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function showAddTaskModal() { showModal('addTaskModal'); }
+function showAddScheduleModal() { showModal('addScheduleModal'); }
+function showAddNoteModal() { showModal('addNoteModal'); }
+function showAddProjectModal() { showModal('addProjectModal'); }
+function showAddGradeModal() { showModal('addGradeModal'); }
+function showAddBudgetModal() { 
+    if (!isPremium) { showModal('premiumLockModal'); return; }
+    showModal('addBudgetModal'); 
+}
+function showAddGoalModal() { showModal('addGoalModal'); }
+function showQuickAddModal() { showModal('quickAddModal'); }
+function showPremiumModal() { showModal('premiumLockModal'); }
 
-    def draw_ring(self):
-        self.canvas.delete("ring")
-        cx, cy, r = 150, 150, 115
-        # Three colored segments: green, blue, orange (like the design)
-        colors = [C_SUCCESS, C_ACCENT2, C_PINK]
-        seg_len = 90  # degrees each
-        gap = 15
-        start = self.angle
-        for i, col in enumerate(colors):
-            s = start + i * (seg_len + gap)
-            self.canvas.create_arc(cx-r, cy-r, cx+r, cy+r, start=s, extent=seg_len,
-                                   style="arc", outline=col, width=8, tags="ring")
-        # Faint full circle background
-        self.canvas.create_arc(cx-r, cy-r, cx+r, cy+r, start=0, extent=359,
-                               style="arc", outline="#2A2A40", width=8, tags="ring_bg")
-        self.canvas.tag_lower("ring_bg")
-
-    def animate(self):
-        self.angle = (self.angle + 6) % 360
-        self.progress += 1
-        self.draw_ring()
-        msgs = ["Loading...", "Preparing your workspace...", "Almost there...", "Welcome!"]
-        idx = min(self.progress // 25, len(msgs)-1)
-        self.status.configure(text=msgs[idx])
-        if self.progress < 100:
-            self.after(30, self.animate)
-        else:
-            self.after(300, self.on_complete)
-
-
-# ============================================================
-# LOGIN SCREEN
-# ============================================================
-class LoginScreen(ctk.CTkFrame):
-    def __init__(self, master, data, on_login):
-        super().__init__(master, fg_color=C_BG)
-        self.data = data
-        self.on_login = on_login
-        self.pack(fill="both", expand=True)
-        self.show_pw = False
-
-        # Card
-        card = ctk.CTkFrame(self, fg_color=C_CARD, corner_radius=20, width=380, height=480)
-        card.place(relx=0.5, rely=0.5, anchor="center")
-        card.pack_propagate(False)
-
-        # Logo
-        self.cap_tk = None
-        try:
-            cap_img = make_grad_cap_image(80)
-            self.cap_tk = ctk.CTkImage(light_image=cap_img, dark_image=cap_img, size=(80, 80))
-            ctk.CTkLabel(card, image=self.cap_tk, text="").pack(pady=(30, 8))
-        except Exception:
-            ctk.CTkLabel(card, text="🎓", font=ctk.CTkFont(size=54)).pack(pady=(30, 8))
-        ctk.CTkLabel(card, text="StudyMate PH", font=ctk.CTkFont(size=22, weight="bold"), text_color=C_TEXT).pack()
-        ctk.CTkLabel(card, text="Plan · Study · Achieve", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM).pack(pady=(0, 20))
-
-        # Form
-        form = ctk.CTkFrame(card, fg_color="transparent")
-        form.pack(fill="x", padx=30)
-
-        ctk.CTkLabel(form, text="Username", font=ctk.CTkFont(size=12, weight="bold"), text_color=C_TEXT_DIM, anchor="w").pack(fill="x", pady=(0, 4))
-        self.user_entry = ctk.CTkEntry(form, placeholder_text="Enter username", height=40, corner_radius=10, fg_color=C_BG, border_color=C_ACCENT)
-        self.user_entry.insert(0, self.data["user"]["username"])
-        self.user_entry.pack(fill="x", pady=(0, 12))
-
-        ctk.CTkLabel(form, text="Password", font=ctk.CTkFont(size=12, weight="bold"), text_color=C_TEXT_DIM, anchor="w").pack(fill="x", pady=(0, 4))
-        pw_frame = ctk.CTkFrame(form, fg_color="transparent")
-        pw_frame.pack(fill="x", pady=(0, 16))
-        self.pw_entry = ctk.CTkEntry(pw_frame, placeholder_text="Enter password", height=40, corner_radius=10, fg_color=C_BG, border_color=C_ACCENT, show="•")
-        self.pw_entry.insert(0, self.data["user"]["password"])
-        self.pw_entry.pack(side="left", fill="x", expand=True)
-        self.eye_btn = ctk.CTkButton(pw_frame, text="👁", width=40, height=40, fg_color=C_BG, hover_color=C_CARD_HOVER, command=self.toggle_pw)
-        self.eye_btn.pack(side="left", padx=(6, 0))
-
-        self.login_btn = ctk.CTkButton(form, text="Log In", height=42, corner_radius=10,
-                                       fg_color=C_ACCENT, hover_color="#6D28D9",
-                                       font=ctk.CTkFont(size=14, weight="bold"), command=self.do_login)
-        self.login_btn.pack(fill="x", pady=(4, 8))
-
-        self.hint = ctk.CTkLabel(form, text=f"Default: {self.data['user']['username']} / {self.data['user']['password']}",
-                                 font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM)
-        self.hint.pack()
-
-        self.error_lbl = ctk.CTkLabel(form, text="", font=ctk.CTkFont(size=11), text_color=C_DANGER)
-        self.error_lbl.pack(pady=(6, 0))
-
-    def toggle_pw(self):
-        self.show_pw = not self.show_pw
-        self.pw_entry.configure(show="" if self.show_pw else "•")
-
-    def do_login(self):
-        u = self.user_entry.get().strip()
-        p = self.pw_entry.get().strip()
-        if u == self.data["user"]["username"] and p == self.data["user"]["password"]:
-            self.on_login()
-        else:
-            self.error_lbl.configure(text="❌ Invalid username or password!")
-
-
-# ============================================================
-# MAIN APP
-# ============================================================
-class StudyMateApp(ctk.CTkFrame):
-    def __init__(self, master, data):
-        super().__init__(master, fg_color=C_BG)
-        self.data = data
-        self.pack(fill="both", expand=True)
-
-        # Grad cap icon for window (skip if PIL/tk incompatible)
-        try:
-            cap = make_grad_cap_image(64)
-            self._icon_ref = ImageTk.PhotoImage(cap)
-            self.master.iconphoto(False, self._icon_ref)
-        except Exception:
-            pass
-
-        # Main layout: sidebar + content
-        self.main = ctk.CTkFrame(self, fg_color=C_BG)
-        self.main.pack(fill="both", expand=True)
-
-        self.sidebar = ctk.CTkFrame(self.main, fg_color=C_SIDEBAR, width=260, corner_radius=0)
-        self.sidebar.pack(side="left", fill="y")
-        self.sidebar.pack_propagate(False)
-
-        self.content = ctk.CTkFrame(self.main, fg_color=C_BG)
-        self.content.pack(side="left", fill="both", expand=True)
-
-        self.current_page = None
-        self.nav_buttons = {}
-        self.build_sidebar()
-        self.show_page("Home")
-
-    # ---------------- SIDEBAR ----------------
-    def build_sidebar(self):
-        # Logo
-        logo_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        logo_frame.pack(fill="x", padx=16, pady=(20, 10))
-        self.logo_img = None
-        try:
-            cap_img = make_grad_cap_image(44)
-            self.logo_img = ctk.CTkImage(light_image=cap_img, dark_image=cap_img, size=(44, 44))
-            ctk.CTkLabel(logo_frame, image=self.logo_img, text="").pack(side="left")
-        except Exception:
-            ctk.CTkLabel(logo_frame, text="🎓", font=ctk.CTkFont(size=30), width=44, height=44).pack(side="left")
-        txt = ctk.CTkFrame(logo_frame, fg_color="transparent")
-        txt.pack(side="left", padx=(10, 0), fill="x", expand=True)
-        ctk.CTkLabel(txt, text="StudyMate PH", font=ctk.CTkFont(size=17, weight="bold"), text_color=C_TEXT, anchor="w").pack(fill="x")
-        ctk.CTkLabel(txt, text="Plan · Study · Achieve", font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM, anchor="w").pack(fill="x")
-
-        # Profile card
-        prof = ctk.CTkFrame(self.sidebar, fg_color=C_CARD, corner_radius=12)
-        prof.pack(fill="x", padx=14, pady=(8, 14))
-        inner = ctk.CTkFrame(prof, fg_color="transparent")
-        inner.pack(fill="x", padx=10, pady=10)
-        avatar = ctk.CTkLabel(inner, text="👩‍🎓", font=ctk.CTkFont(size=26), width=40, height=40, fg_color=C_ACCENT, corner_radius=20)
-        avatar.pack(side="left")
-        pt = ctk.CTkFrame(inner, fg_color="transparent")
-        pt.pack(side="left", padx=(10, 0), fill="x", expand=True)
-        self.name_lbl = ctk.CTkLabel(pt, text=self.data["user"]["name"], font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w")
-        self.name_lbl.pack(fill="x")
-        self.course_lbl = ctk.CTkLabel(pt, text=self.data["user"]["course"], font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM, anchor="w")
-        self.course_lbl.pack(fill="x")
-
-        # Nav scrollable
-        self.nav_scroll = ctk.CTkScrollableFrame(self.sidebar, fg_color="transparent", scrollbar_button_color=C_ACCENT)
-        self.nav_scroll.pack(fill="both", expand=True, padx=8)
-
-        main_menu = [
-            ("🏠", "Home"), ("✅", "My Tasks"), ("📅", "Calendar"), ("📚", "Study Space"),
-            ("👥", "Group Projects"), ("📝", "Notes & Files"), ("🎓", "Grades"),
-            ("🎯", "Study Planner"), ("💰", "Budget Tracker"), ("⚙️", "Settings"),
-        ]
-        for icon, name in main_menu:
-            self.add_nav_button(icon, name)
-
-        # More Features section
-        ctk.CTkLabel(self.nav_scroll, text="✨ More Features", font=ctk.CTkFont(size=11, weight="bold"), text_color=C_TEXT_DIM, anchor="w").pack(fill="x", padx=12, pady=(14, 4))
-        more = [
-            ("🔔", "Deadline Reminder"), ("♻️", "Missed Task Recovery"), ("📤", "Export Reports"),
-            ("⏱️", "Time Estimator"), ("🤖", "AI Study Assistant"), ("📆", "Exam Countdown"),
-            ("🌙", "Focus Mode"), ("💸", "Student Budget Tracker"),
-        ]
-        for icon, name in more:
-            self.add_nav_button(icon, name, small=True)
-
-        # Motivational quote
-        quote = ctk.CTkFrame(self.sidebar, fg_color=C_CARD, corner_radius=12)
-        quote.pack(fill="x", padx=14, pady=(8, 6))
-        ctk.CTkLabel(quote, text="🌱 Small steps every day\nlead to big results.",
-                     font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM, justify="left").pack(padx=12, pady=10, anchor="w")
-
-        # Logout
-        ctk.CTkButton(self.sidebar, text="↪ Log Out", fg_color="transparent", hover_color="#3B1414",
-                      text_color=C_DANGER, font=ctk.CTkFont(size=13, weight="bold"), anchor="w",
-                      command=self.logout).pack(fill="x", padx=14, pady=(4, 14))
-
-    def add_nav_button(self, icon, name, small=False):
-        btn = ctk.CTkButton(self.nav_scroll, text=f"  {icon}  {name}", anchor="w",
-                            fg_color="transparent", hover_color=C_CARD_HOVER,
-                            text_color=C_TEXT, font=ctk.CTkFont(size=12 if not small else 11),
-                            height=34 if not small else 30, corner_radius=10,
-                            command=lambda n=name: self.show_page(n))
-        btn.pack(fill="x", pady=1, padx=4)
-        self.nav_buttons[name] = btn
-
-    def highlight_nav(self, name):
-        for n, btn in self.nav_buttons.items():
-            if n == name:
-                btn.configure(fg_color=C_ACCENT, text_color=C_TEXT)
-            else:
-                btn.configure(fg_color="transparent", text_color=C_TEXT)
-
-    def logout(self):
-        if messagebox.askyesno("Log Out", "Are you sure you want to log out?"):
-            save_data(self.data)
-            self.master.destroy()
-
-    # ---------------- PAGE ROUTER ----------------
-    def show_page(self, name):
-        if self.current_page:
-            self.current_page.destroy()
-        self.highlight_nav(name)
-        page_map = {
-            "Home": HomePage, "My Tasks": TasksPage, "Calendar": CalendarPage,
-            "Study Space": StudySpacePage, "Group Projects": GroupProjectsPage,
-            "Notes & Files": NotesPage, "Grades": GradesPage, "Study Planner": StudyPlannerPage,
-            "Budget Tracker": BudgetPage, "Settings": SettingsPage,
-            "Deadline Reminder": DeadlineReminderPage, "Missed Task Recovery": MissedTaskPage,
-            "Export Reports": ExportReportsPage, "Time Estimator": TimeEstimatorPage,
-            "AI Study Assistant": AIAssistantPage, "Exam Countdown": ExamCountdownPage,
-            "Focus Mode": FocusModePage, "Student Budget Tracker": BudgetPage,
+// ========== AUTH ==========
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    const remember = document.getElementById('rememberMe').checked;
+    
+    fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, password, remember})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            checkSession();
+        } else {
+            document.getElementById('loginError').textContent = data.error;
+            document.getElementById('loginError').classList.add('show');
         }
-        cls = page_map.get(name, HomePage)
-        self.current_page = cls(self.content, self.data, self.show_page, self)
-        self.current_page.pack(fill="both", expand=True, padx=16, pady=14)
+    });
+});
 
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const full_name = document.getElementById('regName').value;
+    const email = document.getElementById('regEmail').value;
+    const student_id = document.getElementById('regStudentId').value;
+    const course_year = document.getElementById('regCourse').value;
+    const password = document.getElementById('regPassword').value;
+    const confirm_password = document.getElementById('regConfirmPass').value;
+    
+    fetch('/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({full_name, email, student_id, course_year, password, confirm_password})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            checkSession();
+        } else {
+            document.getElementById('regError').textContent = data.error;
+            document.getElementById('regError').classList.add('show');
+        }
+    });
+});
 
-# ============================================================
-# BASE PAGE
-# ============================================================
-class BasePage(ctk.CTkScrollableFrame):
-    def __init__(self, master, data, navigate, app=None):
-        super().__init__(master, fg_color=C_BG, scrollbar_button_color=C_ACCENT)
-        self.data = data
-        self.navigate = navigate
-        self.app = app
+function logout() {
+    if (confirm('Are you sure you want to log out?')) {
+        window.location.href = '/logout';
+    }
+}
 
-    def header(self, title, subtitle=""):
-        h = ctk.CTkFrame(self, fg_color="transparent")
-        h.pack(fill="x", pady=(0, 14))
-        ctk.CTkLabel(h, text=title, font=ctk.CTkFont(size=22, weight="bold"), text_color=C_TEXT, anchor="w").pack(side="left")
-        if subtitle:
-            ctk.CTkLabel(h, text=subtitle, font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(side="left", padx=(12, 0))
-        return h
+// ========== DATA LOADING ==========
+function loadAllData() {
+    loadTasks();
+    loadSchedule();
+    loadNotes();
+    loadProjects();
+    loadGrades();
+    if (isPremium) loadBudget();
+    loadGoals();
+}
 
-    def card(self, parent=None, **kw):
-        p = parent or self
-        return ctk.CTkFrame(p, fg_color=C_CARD, corner_radius=14, **kw)
+// --- TASKS ---
+function loadTasks() {
+    fetch('/api/tasks')
+        .then(res => res.json())
+        .then(data => {
+            tasks = data;
+            renderDashboardTasks();
+            renderAllTasks();
+            updateStats();
+        });
+}
 
+function saveTask() {
+    const title = document.getElementById('taskTitle').value.trim();
+    if (!title) { alert('Please enter a title!'); return; }
+    
+    const data = {
+        title: title,
+        subject: document.getElementById('taskSubject').value,
+        description: document.getElementById('taskDesc').value,
+        due_date: document.getElementById('taskDueDate').value,
+        due_time: document.getElementById('taskDueTime').value,
+        priority: document.getElementById('taskPriority').value,
+        reminder_set: document.getElementById('taskReminder').checked
+    };
+    
+    fetch('/api/tasks', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(() => {
+        closeModal('addTaskModal');
+        document.getElementById('addTaskModal').querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+        loadTasks();
+    });
+}
 
-# ============================================================
-# HOME PAGE
-# ============================================================
-class HomePage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        user = data["user"]
+function toggleTaskComplete(id, currentStatus) {
+    fetch('/api/tasks', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id, completed: currentStatus ? 0 : 1})
+    })
+    .then(res => res.json())
+    .then(() => loadTasks());
+}
 
-        # Top bar: greeting + bell + avatar
-        top = ctk.CTkFrame(self, fg_color="transparent")
-        top.pack(fill="x", pady=(0, 10))
-        greet = ctk.CTkFrame(top, fg_color="transparent")
-        greet.pack(side="left", fill="x", expand=True)
-        hour = datetime.datetime.now().hour
-        gr = "Good Morning" if hour < 12 else ("Good Afternoon" if hour < 18 else "Good Evening")
-        ctk.CTkLabel(greet, text=f"{gr},\n{user['name']} ☀️", font=ctk.CTkFont(size=24, weight="bold"),
-                     text_color=C_TEXT, justify="left", anchor="w").pack(anchor="w")
-        ctk.CTkLabel(greet, text="Keep going! Your future self will thank you.",
-                     font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", pady=(4, 0))
-        ctk.CTkButton(top, text="🔔", width=44, height=44, fg_color=C_CARD, hover_color=C_CARD_HOVER, corner_radius=22,
-                      command=lambda: self.navigate("Deadline Reminder")).pack(side="right", padx=(6, 0))
-        ctk.CTkLabel(top, text="👩‍🎓", font=ctk.CTkFont(size=22), width=44, height=44, fg_color=C_ACCENT, corner_radius=22).pack(side="right")
+function deleteTask(id) {
+    if (!confirm('Delete this task?')) return;
+    fetch(/api/tasks?id=${id}, {method: 'DELETE'})
+        .then(res => res.json())
+        .then(() => loadTasks());
+}
 
-        # Hero illustration card
-        hero = self.card()
-        hero.pack(fill="x", pady=(0, 14))
-        hb = ctk.CTkFrame(hero, fg_color="transparent")
-        hb.pack(fill="x", padx=18, pady=14)
-        ctk.CTkLabel(hb, text="💻📚🎓", font=ctk.CTkFont(size=46)).pack(side="right", padx=(10, 0))
-        ctk.CTkLabel(hb, text="Ready to ace this semester? 🚀", font=ctk.CTkFont(size=16, weight="bold"),
-                     text_color=C_TEXT, anchor="w").pack(anchor="w")
-        ctk.CTkLabel(hb, text=f"{len([t for t in data['tasks'] if not t['done']])} tasks pending · {len(data['deadlines'])} deadlines coming up",
-                     font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", pady=(4, 0))
+function getDaysRemaining(dueDateStr) {
+    const due = new Date(dueDateStr);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+    return Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+}
 
-        # Two columns: schedule + (deadlines & stats)
-        cols = ctk.CTkFrame(self, fg_color="transparent")
-        cols.pack(fill="x")
-        left_col = ctk.CTkFrame(cols, fg_color="transparent")
-        left_col.pack(side="left", fill="both", expand=True, padx=(0, 8))
-        right_col = ctk.CTkFrame(cols, fg_color="transparent")
-        right_col.pack(side="left", fill="both", expand=True, padx=(8, 0))
+function renderDashboardTasks() {
+    const today = new Date().toISOString().split('T')[0];
+    const todayList = document.getElementById('todayScheduleList');
+    const upcomingList = document.getElementById('upcomingTasksList');
+    
+    const todayTasks = tasks.filter(t => t.due_date === today && !t.completed);
+    const upcomingTasks = tasks.filter(t => t.due_date >= today && !t.completed).sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 5);
+    
+    // Today's schedule section uses schedule data, not tasks
+    renderTodaySchedule();
+    
+    if (upcomingTasks.length === 0) {
+        upcomingList.innerHTML = '<div class="empty-state"><span>🎉</span>No upcoming deadlines. You\'re all caught up!</div>';
+    } else {
+        upcomingList.innerHTML = upcomingTasks.map(t => {
+            const daysLeft = getDaysRemaining(t.due_date);
+            let dueClass = 'due-later';
+            let dueText = ${daysLeft} days left;
+            if (daysLeft === 0) { dueClass = 'due-today'; dueText = 'Today!'; }
+            else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = ${Math.abs(daysLeft)} days overdue; }
+            else if (daysLeft <= 2) { dueClass = 'due-today'; }
+            
+            return `
+                <div class="task-item">
+                    <div class="task-priority priority-${t.priority}"></div>
+                    <div class="task-text">
+                        <div class="task-title">${t.title}</div>
+                        <div class="task-meta">${t.subject || 'No subject'} · ${new Date(t.due_date).toLocaleDateString('en-PH')}
+                            <span class="task-due ${dueClass}">${dueText}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+}
 
-        # Today's Schedule
-        sch = self.card(left_col)
-        sch.pack(fill="x")
-        sh = ctk.CTkFrame(sch, fg_color="transparent")
-        sh.pack(fill="x", padx=16, pady=(12, 6))
-        ctk.CTkLabel(sh, text="📅 Today's Schedule", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(side="left")
-        ctk.CTkButton(sh, text="View Calendar →", fg_color="transparent", hover_color=C_CARD_HOVER, text_color=C_ACCENT2,
-                      font=ctk.CTkFont(size=11), command=lambda: self.navigate("Calendar")).pack(side="right")
-        ctk.CTkLabel(sch, text="Tue, Apr 29, 2025", font=ctk.CTkFont(size=11), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", padx=16)
-        for s in data["schedule"]:
-            row = ctk.CTkFrame(sch, fg_color=C_BG, corner_radius=10)
-            row.pack(fill="x", padx=16, pady=5)
-            ri = ctk.CTkFrame(row, fg_color="transparent")
-            ri.pack(fill="x", padx=12, pady=10)
-            dot = ctk.CTkLabel(ri, text="●", text_color=s["color"], font=ctk.CTkFont(size=14)).pack(side="left")
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", padx=(10, 0), fill="x", expand=True)
-            ctk.CTkLabel(info, text=s["time"], font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(info, text=s["subject"], font=ctk.CTkFont(size=13, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(ri, text=f"📍 {s['room']}", font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM).pack(side="right")
+function renderAllTasks() {
+    const container = document.getElementById('allTasksList');
+    if (tasks.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>📋</span>No tasks yet. Click "+ Add Task" to get started!</div>';
+        return;
+    }
+    
+    container.innerHTML = tasks.sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).map(t => {
+        const daysLeft = getDaysRemaining(t.due_date);
+        let dueClass = 'due-later';
+        let dueText = ${daysLeft}d;
+        if (daysLeft === 0) { dueClass = 'due-today'; dueText = 'Today'; }
+        else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = ${Math.abs(daysLeft)}d overdue; }
+        
+        return `
+            <div class="card" style="margin-bottom: 10px;">
+                <div class="task-item" style="border-bottom: none; padding: 0;">
+                    <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTaskComplete(${t.id}, ${t.completed})" style="flex-shrink: 0;">
+                    <div class="task-priority priority-${t.priority}"></div>
+                    <div class="task-text">
+                        <div class="task-title ${t.completed ? 'completed' : ''}">${t.title}</div>
+                        <div class="task-meta">
+                            ${t.subject ? <strong>${t.subject}</strong> ·  : ''}
+                            ${new Date(t.due_date).toLocaleDateString('en-PH')} ${t.due_time || ''}
+                            <span class="task-due ${dueClass}">${dueText}</span>
+                        </div>
+                        ${t.description ? <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">${t.description}</div> : ''}
+                    </div>
+                    <button onclick="deleteTask(${t.id})" style="background: none; border: none; color: var(--danger); cursor: pointer;">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
-        # Upcoming Deadlines
-        dl = self.card(right_col)
-        dl.pack(fill="x", pady=(0, 8))
-        dh = ctk.CTkFrame(dl, fg_color="transparent")
-        dh.pack(fill="x", padx=16, pady=(12, 6))
-        ctk.CTkLabel(dh, text="⏰ Upcoming Deadlines", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(side="left")
-        ctk.CTkButton(dh, text="View All →", fg_color="transparent", hover_color=C_CARD_HOVER, text_color=C_ACCENT2,
-                      font=ctk.CTkFont(size=11), command=lambda: self.navigate("My Tasks")).pack(side="right")
-        for d in data["deadlines"]:
-            row = ctk.CTkFrame(dl, fg_color=C_BG, corner_radius=10)
-            row.pack(fill="x", padx=16, pady=4)
-            ri = ctk.CTkFrame(row, fg_color="transparent")
-            ri.pack(fill="x", padx=12, pady=9)
-            ctk.CTkLabel(ri, text="📄", font=ctk.CTkFont(size=18), fg_color=d["color"], corner_radius=8, width=34, height=34).pack(side="left")
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", padx=(10, 0), fill="x", expand=True)
-            ctk.CTkLabel(info, text=d["title"], font=ctk.CTkFont(size=12, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(info, text=f"Due {d['due']}", font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(ri, text=f"{d['days_left']} days left", font=ctk.CTkFont(size=10, weight="bold"),
-                         text_color=C_WARNING, fg_color="#3B2F10", corner_radius=8).pack(side="right", padx=(6, 0))
+function updateStats() {
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const pending = total - done;
+    const today = new Date().toISOString().split('T')[0];
+    const overdue = tasks.filter(t => !t.completed && t.due_date < today).length;
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+    
+    document.getElementById('statPercent').textContent = ${percent}%;
+    document.getElementById('statDone').textContent = done;
+    document.getElementById('statPending').textContent = pending;
+    document.getElementById('statOverdue').textContent = overdue;
+    
+    // Update progress circle
+    document.querySelector('.stat-circle').style.background = 
+        conic-gradient(var(--primary) ${percent}%, var(--border) ${percent}% 100%);
+}
 
-        # Quick Stats with donut
-        st = self.card(right_col)
-        st.pack(fill="x")
-        ctk.CTkLabel(st, text="📊 Quick Stats", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 4))
-        stats_row = ctk.CTkFrame(st, fg_color="transparent")
-        stats_row.pack(fill="x", padx=16, pady=(0, 12))
-        total = len(data["tasks"])
-        done = len([t for t in data["tasks"] if t["done"]])
-        pending = len([t for t in data["tasks"] if not t["done"] and not t["overdue"]])
-        overdue = len([t for t in data["tasks"] if t["overdue"] and not t["done"]])
-        pct = int(done / total * 100) if total else 0
-        # Donut canvas
-        self.donut = tk.Canvas(stats_row, width=110, height=110, bg=C_CARD, highlightthickness=0)
-        self.donut.pack(side="left", padx=(0, 14))
-        self.draw_donut(pct)
-        legend = ctk.CTkFrame(stats_row, fg_color="transparent")
-        legend.pack(side="left", fill="both", expand=True)
-        for label, val, col in [("Completed", done, C_SUCCESS), ("Pending", pending, C_WARNING), ("Overdue", overdue, C_DANGER)]:
-            lr = ctk.CTkFrame(legend, fg_color="transparent")
-            lr.pack(fill="x", pady=2)
-            ctk.CTkLabel(lr, text="●", text_color=col, font=ctk.CTkFont(size=12)).pack(side="left")
-            ctk.CTkLabel(lr, text=label, font=ctk.CTkFont(size=11), text_color=C_TEXT_DIM).pack(side="left", padx=(4, 0))
-            ctk.CTkLabel(lr, text=str(val), font=ctk.CTkFont(size=12, weight="bold"), text_color=C_TEXT).pack(side="right")
+// --- SCHEDULE ---
+function loadSchedule() {
+    fetch('/api/schedule')
+        .then(res => res.json())
+        .then(data => {
+            schedule = data;
+            renderTodaySchedule();
+            renderFullSchedule();
+        });
+}
 
-        # Quick Actions grid
-        ctk.CTkLabel(self, text="⚡ Quick Actions", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", pady=(16, 8))
-        actions = [
-            ("➕", "Add Task", C_ACCENT, "My Tasks"), ("📅", "View Schedule", C_ACCENT2, "Calendar"),
-            ("🎯", "Study Planner", C_PURPLE, "Study Planner"), ("⏱️", "Focus Mode", C_TEAL, "Focus Mode"),
-            ("🤖", "AI Assistant", C_PINK, "AI Study Assistant"), ("🔔", "Deadline Reminder", C_WARNING, "Deadline Reminder"),
-            ("♻️", "Missed Task Recovery", C_SUCCESS, "Missed Task Recovery"), ("📤", "Export Reports", C_BLUE, "Export Reports"),
-        ]
-        grid = ctk.CTkFrame(self, fg_color="transparent")
-        grid.pack(fill="x")
-        for i, (icon, label, col, target) in enumerate(actions):
-            if i % 4 == 0:
-                row_f = ctk.CTkFrame(grid, fg_color="transparent")
-                row_f.pack(fill="x", pady=4)
-            b = ctk.CTkButton(row_f, text=f"{icon}\n{label}", fg_color=C_CARD, hover_color=col,
-                              font=ctk.CTkFont(size=11, weight="bold"), text_color=C_TEXT,
-                              height=70, corner_radius=14, command=lambda t=target: self.navigate(t))
-            b.pack(side="left", fill="x", expand=True, padx=4)
+function saveSchedule() {
+    const data = {
+        subject: document.getElementById('schSubject').value,
+        day: document.getElementById('schDay').value,
+        time_start: document.getElementById('schStart').value,
+        time_end: document.getElementById('schEnd').value,
+        room: document.getElementById('schRoom').value
+    };
+    
+    fetch('/api/schedule', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(() => {
+        closeModal('addScheduleModal');
+        document.getElementById('addScheduleModal').querySelectorAll('input, select').forEach(el => el.value = '');
+        loadSchedule();
+    });
+}
 
-        # Motivational banner
-        banner = ctk.CTkFrame(self, fg_color="#1E1B4B", corner_radius=14)
-        banner.pack(fill="x", pady=(16, 10))
-        bb = ctk.CTkFrame(banner, fg_color="transparent")
-        bb.pack(fill="x", padx=18, pady=14)
-        ctk.CTkLabel(bb, text="🏔️🌙", font=ctk.CTkFont(size=30)).pack(side="right")
-        ctk.CTkLabel(bb, text="Progress, not perfection.", font=ctk.CTkFont(size=15, weight="bold"),
-                     text_color=C_TEXT, anchor="w").pack(anchor="w")
-        ctk.CTkLabel(bb, text="You're doing great! 💪", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
+function deleteSchedule(id) {
+    if (!confirm('Delete this schedule?')) return;
+    fetch(/api/schedule?id=${id}, {method: 'DELETE'})
+        .then(res => res.json())
+        .then(() => loadSchedule());
+}
 
-        # Bottom nav bar
-        self.bottom_nav()
+function getTodayName() {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[new Date().getDay()];
+}
 
-    def draw_donut(self, pct):
-        self.donut.delete("all")
-        cx, cy, r = 55, 55, 42
-        self.donut.create_arc(cx-r, cy-r, cx+r, cy+r, start=90, extent=359, style="arc", outline="#2A2A40", width=12)
-        extent = int(360 * pct / 100)
-        if extent > 0:
-            self.donut.create_arc(cx-r, cy-r, cx+r, cy+r, start=90, extent=-extent, style="arc", outline=C_SUCCESS, width=12)
-        self.donut.create_text(cx, cy-6, text=f"{pct}%", fill=C_TEXT, font=("Arial", 16, "bold"))
-        self.donut.create_text(cx, cy+14, text="Tasks Completed", fill=C_TEXT_DIM, font=("Arial", 7))
+function renderTodaySchedule() {
+    const today = getTodayName();
+    const todaySched = schedule.filter(s => s.day === today).sort((a, b) => a.time_start.localeCompare(b.time_start));
+    const container = document.getElementById('todayScheduleList');
+    
+    if (todaySched.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>📭</span>No classes today. Enjoy your time!</div>';
+    } else {
+        container.innerHTML = todaySched.map(s => `
+            <div class="task-item">
+                <div style="width: 4px; background: ${s.color}; border-radius: 2px; flex-shrink: 0;"></div>
+                <div class="task-text">
+                    <div class="task-title">${s.subject}</div>
+                    <div class="task-meta">${formatTime(s.time_start)} - ${formatTime(s.time_end)} · ${s.room || 'No room'}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+}
 
-    def bottom_nav(self):
-        nav = ctk.CTkFrame(self, fg_color=C_CARD, corner_radius=16, height=56)
-        nav.pack(fill="x", pady=(6, 4))
-        nav.pack_propagate(False)
-        items = [("🏠", "Home"), ("✅", "Tasks"), ("📅", "Calendar"), ("👤", "Profile")]
-        for icon, name in items:
-            target = "Settings" if name == "Profile" else ("My Tasks" if name == "Tasks" else name)
-            ctk.CTkButton(nav, text=f"{icon} {name}", fg_color="transparent", hover_color=C_CARD_HOVER,
-                          text_color=C_TEXT_DIM, font=ctk.CTkFont(size=12, weight="bold"),
-                          command=lambda t=target: self.navigate(t)).pack(side="left", fill="both", expand=True)
-        ctk.CTkButton(nav, text="➕", width=48, height=48, fg_color=C_ACCENT, hover_color="#6D28D9",
-                      corner_radius=24, font=ctk.CTkFont(size=20), command=lambda: self.navigate("My Tasks")).place(relx=0.5, rely=0.5, anchor="center")
+function formatTime(t) {
+    if (!t) return '';
+    const [h, m] = t.split(':');
+    const hour = parseInt(h);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const h12 = hour % 12 || 12;
+    return ${h12}:${m} ${ampm};
+}
 
+function renderFullSchedule() {
+    const container = document.getElementById('scheduleList');
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    if (schedule.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>📅</span>No schedule yet. Add your first class!</div>';
+        return;
+    }
+    
+    container.innerHTML = days.map(day => {
+        const daySched = schedule.filter(s => s.day === day).sort((a, b) => a.time_start.localeCompare(b.time_start));
+        if (daySched.length === 0) return '';
+        
+        return `
+            <div class="card">
+                <h4 style="margin-bottom: 10px; color: var(--primary);">${day}</h4>
+                ${daySched.map(s => `
+                    <div class="task-item" style="border-bottom: 1px solid var(--border); padding: 8px 0;">
+                        <div style="width: 4px; background: ${s.color}; border-radius: 2px; flex-shrink: 0; min-height: 40px;"></div>
+                        <div class="task-text">
+                            <div style="font-weight: 500;">${s.subject}</div>
+                            <div style="font-size: 12px; color: var(--muted);">${formatTime(s.time_start)} - ${formatTime(s.time_end)} · ${s.room || 'No room'}</div>
+                        </div>
+                        <button onclick="deleteSchedule(${s.id})" style="background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px;">×</button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }).join('');
+}
 
-# ============================================================
-# MY TASKS PAGE
-# ============================================================
-class TasksPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.filter_var = ctk.StringVar(value="All")
-        self.header("✅ My Tasks", "Manage all your school tasks")
-        self.build_add_form()
-        self.build_filters()
-        self.build_task_list()
+// --- NOTES ---
+function loadNotes() {
+    fetch('/api/notes')
+        .then(res => res.json())
+        .then(data => {
+            notes = data;
+            renderNotes();
+        });
+}
 
-    def build_add_form(self):
-        form = self.card()
-        form.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(form, text="➕ Add New Task", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 8))
-        row = ctk.CTkFrame(form, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=(0, 12))
-        self.title_e = ctk.CTkEntry(row, placeholder_text="Task title...", height=38, fg_color=C_BG, border_color=C_ACCENT)
-        self.title_e.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        self.due_e = ctk.CTkEntry(row, placeholder_text="Due date (e.g. May 10, 2025)", width=200, height=38, fg_color=C_BG, border_color=C_ACCENT)
-        self.due_e.pack(side="left", padx=6)
-        self.cat_e = ctk.CTkComboBox(row, values=["Schoolwork", "Project", "Review", "Requirement"], height=38, fg_color=C_BG, button_color=C_ACCENT)
-        self.cat_e.pack(side="left", padx=6)
-        ctk.CTkButton(row, text="Add", width=80, height=38, fg_color=C_ACCENT, hover_color="#6D28D9", command=self.add_task).pack(side="left", padx=(6, 0))
+function saveNote() {
+    const title = document.getElementById('noteTitle').value.trim();
+    if (!title) { alert('Please enter a title!'); return; }
+    
+    const data = {
+        title: title,
+        content: document.getElementById('noteContent').value,
+        folder_name: document.getElementById('noteFolder').value
+    };
+    
+    fetch('/api/notes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(() => {
+        closeModal('addNoteModal');
+        document.getElementById('addNoteModal').querySelectorAll('input, textarea, select').forEach(el => el.value = '');
+        loadNotes();
+    });
+}
 
-    def build_filters(self):
-        fr = ctk.CTkFrame(self, fg_color="transparent")
-        fr.pack(fill="x", pady=(0, 10))
-        for f in ["All", "Pending", "Completed", "Overdue"]:
-            ctk.CTkButton(fr, text=f, width=90, height=32, corner_radius=16,
-                          fg_color=C_ACCENT if self.filter_var.get() == f else C_CARD,
-                          hover_color=C_CARD_HOVER, text_color=C_TEXT, font=ctk.CTkFont(size=11, weight="bold"),
-                          command=lambda x=f: self.set_filter(x)).pack(side="left", padx=3)
+function deleteNote(id) {
+    if (!confirm('Delete this note?')) return;
+    fetch(/api/notes?id=${id}, {method: 'DELETE'})
+        .then(res => res.json())
+        .then(() => loadNotes());
+}
 
-    def set_filter(self, f):
-        self.filter_var.set(f)
-        # rebuild list
-        for w in self.list_frame.winfo_children():
-            w.destroy()
-        self.build_task_list_items()
+function renderNotes() {
+    const container = document.getElementById('notesList');
+    const folders = {'General': '📁 General', 'Reviewer': '📋 Reviewer', 'Lecture': '📖 Lecture', 'Personal': '✏️ Personal'};
+    
+    if (notes.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>📝</span>No notes yet. Start writing!</div>';
+        return;
+    }
+    
+    container.innerHTML = Object.entries(folders).map(([key, label]) => {
+        const folderNotes = notes.filter(n => n.folder_name === key);
+        if (folderNotes.length === 0) return '';
+        
+        return `
+            <div class="card">
+                <h4 style="margin-bottom: 12px;">${label}</h4>
+                ${folderNotes.map(n => `
+                    <div style="padding: 10px 0; border-bottom: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <div style="font-weight: 500;">${n.title}</div>
+                                ${n.content ? <div style="font-size: 13px; color: var(--muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;">${n.content}</div> : ''}
+                                <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">${new Date(n.updated_at).toLocaleDateString('en-PH')}</div>
+                            </div>
+                            <button onclick="deleteNote(${n.id})" style="background: none; border: none; color: var(--danger); cursor: pointer;">🗑️</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }).join('');
+}
 
-    def build_task_list(self):
-        self.list_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.list_frame.pack(fill="x")
-        self.build_task_list_items()
+// --- PROJECTS ---
+function loadProjects() {
+    fetch('/api/projects')
+        .then(res => res.json())
+        .then(data => {
+            projects = data;
+            renderProjects();
+        });
+}
 
-    def build_task_list_items(self):
-        f = self.filter_var.get()
-        tasks = self.data["tasks"]
-        if f == "Pending":
-            tasks = [t for t in tasks if not t["done"] and not t["overdue"]]
-        elif f == "Completed":
-            tasks = [t for t in tasks if t["done"]]
-        elif f == "Overdue":
-            tasks = [t for t in tasks if t["overdue"] and not t["done"]]
+function saveProject() {
+    const name = document.getElementById('projName').value.trim();
+    if (!name) { alert('Please enter a project name!'); return; }
+    
+    const data = {
+        name: name,
+        members: document.getElementById('projMembers').value,
+        deadline: document.getElementById('projDeadline').value
+    };
+    
+    fetch('/api/projects', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(() => {
+        closeModal('addProjectModal');
+        document.getElementById('addProjectModal').querySelectorAll('input').forEach(el => el.value = '');
+        loadProjects();
+    });
+}
 
-        if not tasks:
-            ctk.CTkLabel(self.list_frame, text="🎉 No tasks here! Great job!", font=ctk.CTkFont(size=14), text_color=C_TEXT_DIM).pack(pady=30)
-            return
+function updateProjectStatus(id, status) {
+    fetch('/api/projects', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id, status: status})
+    })
+    .then(res => res.json())
+    .then(() => loadProjects());
+}
 
-        for t in tasks:
-            row = self.card(self.list_frame)
-            row.pack(fill="x", pady=4)
-            ri = ctk.CTkFrame(row, fg_color="transparent")
-            ri.pack(fill="x", padx=14, pady=10)
-            status = "✅" if t["done"] else ("🔴" if t["overdue"] else "⭕")
-            cb = ctk.CTkCheckBox(ri, text=status, width=24, fg_color=C_SUCCESS, hover_color=C_CARD_HOVER,
-                                 command=lambda tid=t["id"]: self.toggle_task(tid))
-            if t["done"]:
-                cb.select()
-            cb.pack(side="left")
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", padx=(12, 0), fill="x", expand=True)
-            style = "overstrike" if t["done"] else "normal"
-            ctk.CTkLabel(info, text=t["title"], font=ctk.CTkFont(size=13, weight="bold", slant="roman"),
-                         text_color=C_TEXT_DIM if t["done"] else C_TEXT, anchor="w").pack(anchor="w")
-            tag_color = C_DANGER if t["overdue"] and not t["done"] else C_ACCENT2
-            ctk.CTkLabel(info, text=f"📅 {t['due']} · 🏷️ {t['category']}", font=ctk.CTkFont(size=10),
-                         text_color=tag_color, anchor="w").pack(anchor="w")
-            ctk.CTkButton(ri, text="🗑", width=36, height=36, fg_color="transparent", hover_color="#3B1414",
-                          text_color=C_DANGER, command=lambda tid=t["id"]: self.delete_task(tid)).pack(side="right")
+function deleteProject(id) {
+    if (!confirm('Delete this project?')) return;
+    fetch(/api/projects?id=${id}, {method: 'DELETE'})
+        .then(res => res.json())
+        .then(() => loadProjects());
+}
 
-    def add_task(self):
-        title = self.title_e.get().strip()
-        if not title:
-            messagebox.showwarning("Warning", "Please enter a task title!")
-            return
-        new_id = max([t["id"] for t in self.data["tasks"]] + [0]) + 1
-        self.data["tasks"].append({
-            "id": new_id, "title": title,
-            "due": self.due_e.get().strip() or "No date",
-            "category": self.cat_e.get(), "done": False, "overdue": False,
+function renderProjects() {
+    const container = document.getElementById('projectsList');
+    
+    if (projects.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>👥</span>No projects yet. Create one for your group!</div>';
+        return;
+    }
+    
+    container.innerHTML = projects.map(p => `
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <h4 style="font-size: 16px;">${p.name}</h4>
+                <span style="font-size: 12px; padding: 3px 8px; border-radius: 10px; background: ${p.status === 'Completed' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)'} ; color: ${p.status === 'Completed' ? 'var(--success)' : 'var(--warning)'};">${p.status}</span>
+            </div>
+            ${p.members ? <p style="font-size: 13px; color: var(--muted);"><strong>Members:</strong> ${p.members}</p> : ''}
+            ${p.deadline ? <p style="font-size: 13px; color: var(--muted);"><strong>Deadline:</strong> ${new Date(p.deadline).toLocaleDateString('en-PH')}</p> : ''}
+            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                ${p.status !== 'Completed' 
+                    ? <button class="btn btn-success btn-sm" onclick="updateProjectStatus(${p.id}, 'Completed')">✓ Mark Done</button>
+                    : ''}
+                <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})">🗑️ Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// --- GRADES & GPA ---
+function loadGrades() {
+    fetch('/api/grades')
+        .then(res => res.json())
+        .then(data => {
+            grades = data;
+            renderGrades();
+            calculateGPA();
+        });
+}
+
+function saveGrade() {
+    const subject = document.getElementById('gradeSubject').value.trim();
+    const score = parseFloat(document.getElementById('gradeScore').value);
+    const units = parseFloat(document.getElementById('gradeUnits').value) || 3;
+    
+    if (!subject || isNaN(score)) { alert('Please enter subject and score!'); return; }
+    if (score < 0 || score > 100) { alert('Score must be between 0 and 100!'); return; }
+    
+    const data = {
+        subject: subject,
+        score: score,
+        units: units,
+        semester: document.getElementById('gradeSem').value
+    };
+    
+    fetch('/api/grades', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(() => {
+        closeModal('addGradeModal');
+        document.getElementById('addGradeModal').querySelectorAll('input').forEach(el => el.value = '');
+        loadGrades();
+    });
+}
+
+function deleteGrade(id) {
+    if (!confirm('Delete this grade entry?')) return;
+    fetch(/api/grades?id=${id}, {method: 'DELETE'})
+        .then(res => res.json())
+        .then(() => loadGrades());
+}
+
+function toGPAScale(score) {
+    if (score >= 97) return 1.00;
+    if (score >= 93) return 1.25;
+    if (score >= 89) return 1.50;
+    if (score >= 85) return 1.75;
+    if (score >= 81) return 2.00;
+    if (score >= 77) return 2.25;
+    if (score >= 73) return 2.50;
+    if (score >= 69) return 2.75;
+    if (score >= 65) return 3.00;
+    return 5.00;
+}
+
+function calculateGPA() {
+    if (grades.length === 0) {
+        document.getElementById('gpaDisplay').textContent = '--';
+        return;
+    }
+    
+    let totalWeight = 0;
+    let totalUnits = 0;
+    grades.forEach(g => {
+        const gpa = toGPAScale(g.score);
+        totalWeight += gpa * g.units;
+        totalUnits += g.units;
+    });
+    
+    const gpa = totalWeight / totalUnits;
+    document.getElementById('gpaDisplay').textContent = gpa.toFixed(2);
+}
+
+function renderGrades() {
+    const container = document.getElementById('gradesList');
+    
+    if (grades.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>📊</span>No grades recorded yet.</div>';
+        return;
+    }
+    
+    container.innerHTML = grades.map(g => {
+        const gpa = toGPAScale(g.score);
+        const color = gpa <= 1.5 ? 'var(--success)' : gpa <= 2.5 ? 'var(--warning)' : 'var(--danger)';
+        
+        return `
+            <div class="card" style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 500;">${g.subject}</div>
+                        <div style="font-size: 12px; color: var(--muted);">${g.units} unit${g.units > 1 ? 's' : ''} · ${g.semester || ''}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 20px; font-weight: 700; color: ${color};">${gpa.toFixed(2)}</div>
+                        <div style="font-size: 12px; color: var(--muted);">${g.score}/100</div>
+                    </div>
+                </div>
+                <button onclick="deleteGrade(${g.id})" style="margin-top: 8px; background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px;">🗑️ Delete</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// --- BUDGET (PREMIUM ONLY) ---
+function loadBudget() {
+    fetch('/api/budget')
+        .then(res => {
+            if (res.status === 403) {
+                document.getElementById('budgetList').innerHTML = '<div class="empty-state"><span>🔒</span>Premium feature required</div>';
+                return;
+            }
+            return res.json();
         })
-        save_data(self.data)
-        self.title_e.delete(0, "end")
-        self.due_e.delete(0, "end")
-        self.set_filter(self.filter_var.get())
-
-    def toggle_task(self, tid):
-        for t in self.data["tasks"]:
-            if t["id"] == tid:
-                t["done"] = not t["done"]
-                if t["done"]:
-                    t["overdue"] = False
-        save_data(self.data)
-        self.set_filter(self.filter_var.get())
-
-    def delete_task(self, tid):
-        if messagebox.askyesno("Delete", "Delete this task?"):
-            self.data["tasks"] = [t for t in self.data["tasks"] if t["id"] != tid]
-            save_data(self.data)
-            self.set_filter(self.filter_var.get())
-
-
-# ============================================================
-# CALENDAR PAGE
-# ============================================================
-class CalendarPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.today = datetime.date(2025, 4, 29)
-        self.cur = self.today
-        self.header("📅 Calendar", "View and manage your schedule")
-        self.build_calendar()
-
-    def build_calendar(self):
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        top = ctk.CTkFrame(card, fg_color="transparent")
-        top.pack(fill="x", padx=16, pady=12)
-        ctk.CTkButton(top, text="◀", width=40, height=36, fg_color=C_BG, hover_color=C_CARD_HOVER,
-                      command=self.prev_month).pack(side="left")
-        self.month_lbl = ctk.CTkLabel(top, text="", font=ctk.CTkFont(size=16, weight="bold"), text_color=C_TEXT)
-        self.month_lbl.pack(side="left", expand=True)
-        ctk.CTkButton(top, text="▶", width=40, height=36, fg_color=C_BG, hover_color=C_CARD_HOVER,
-                      command=self.next_month).pack(side="left")
-        self.grid_frame = ctk.CTkFrame(card, fg_color="transparent")
-        self.grid_frame.pack(fill="x", padx=16, pady=(0, 16))
-        self.render_month()
-        self.events_card = self.card()
-        self.events_card.pack(fill="x")
-        self.show_events(self.today)
-
-    def render_month(self):
-        for w in self.grid_frame.winfo_children():
-            w.destroy()
-        self.month_lbl.configure(text=self.cur.strftime("%B %Y"))
-        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        hdr = ctk.CTkFrame(self.grid_frame, fg_color="transparent")
-        hdr.pack(fill="x")
-        for d in days:
-            ctk.CTkLabel(hdr, text=d, font=ctk.CTkFont(size=11, weight="bold"), text_color=C_TEXT_DIM, width=40).pack(side="left", expand=True, fill="x")
-        year, month = self.cur.year, self.cur.month
-        first = datetime.date(year, month, 1)
-        start_wd = first.weekday()
-        import calendar as cal
-        days_in_month = cal.monthrange(year, month)[1]
-        day = 1
-        for week in range(6):
-            wr = ctk.CTkFrame(self.grid_frame, fg_color="transparent")
-            wr.pack(fill="x", pady=2)
-            for col in range(7):
-                if week == 0 and col < start_wd:
-                    ctk.CTkLabel(wr, text="", width=40, height=36).pack(side="left", expand=True, fill="x")
-                elif day <= days_in_month:
-                    ddate = datetime.date(year, month, day)
-                    key = ddate.strftime("%Y-%m-%d")
-                    has_event = key in self.data["calendar_events"]
-                    is_today = ddate == self.today
-                    fg = C_ACCENT if is_today else (C_CARD_HOVER if has_event else C_BG)
-                    btn = ctk.CTkButton(wr, text=str(day), width=40, height=36, fg_color=fg, hover_color=C_ACCENT2,
-                                        text_color=C_TEXT, font=ctk.CTkFont(size=12, weight="bold" if is_today else "normal"),
-                                        corner_radius=10, command=lambda d=ddate: self.show_events(d))
-                    btn.pack(side="left", expand=True, fill="x", padx=1)
-                    day += 1
-                else:
-                    ctk.CTkLabel(wr, text="", width=40, height=36).pack(side="left", expand=True, fill="x")
-
-    def prev_month(self):
-        self.cur = (self.cur.replace(day=1) - datetime.timedelta(days=1)).replace(day=1)
-        self.render_month()
-
-    def next_month(self):
-        self.cur = (self.cur.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
-        self.render_month()
-
-    def show_events(self, date):
-        for w in self.events_card.winfo_children():
-            w.destroy()
-        key = date.strftime("%Y-%m-%d")
-        ctk.CTkLabel(self.events_card, text=f"📌 Events for {date.strftime('%B %d, %Y')}",
-                     font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 6))
-        events = self.data["calendar_events"].get(key, [])
-        if events:
-            for e in events:
-                ctk.CTkLabel(self.events_card, text=f"  • {e}", font=ctk.CTkFont(size=12),
-                             text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", padx=20, pady=2)
-        else:
-            ctk.CTkLabel(self.events_card, text="  No events for this day. Enjoy! 🌿", font=ctk.CTkFont(size=12),
-                         text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", padx=20, pady=(0, 12))
-        # Add event
-        add_f = ctk.CTkFrame(self.events_card, fg_color="transparent")
-        add_f.pack(fill="x", padx=16, pady=(8, 12))
-        self.ev_entry = ctk.CTkEntry(add_f, placeholder_text="Add event...", height=36, fg_color=C_BG, border_color=C_ACCENT)
-        self.ev_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        ctk.CTkButton(add_f, text="Add", width=70, height=36, fg_color=C_ACCENT, hover_color="#6D28D9",
-                      command=lambda: self.add_event(key)).pack(side="left")
-
-    def add_event(self, key):
-        ev = self.ev_entry.get().strip()
-        if ev:
-            self.data["calendar_events"].setdefault(key, []).append(ev)
-            save_data(self.data)
-            self.render_month()
-            self.show_events(datetime.datetime.strptime(key, "%Y-%m-%d").date())
-
-
-# ============================================================
-# STUDY SPACE PAGE
-# ============================================================
-class StudySpacePage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("📚 Study Space", "Flashcards & study materials")
-        self.flashcards = [
-            ("OOP", "Object-Oriented Programming - uses objects and classes"),
-            ("CPU", "Central Processing Unit - the brain of the computer"),
-            ("LAN", "Local Area Network - connects computers in a small area"),
-            ("Algorithm", "Step-by-step procedure to solve a problem"),
-        ]
-        self.fc_idx = 0
-        self.fc_flipped = False
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(card, text="🃏 Flashcards", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 8))
-        self.fc_lbl = ctk.CTkLabel(card, text="", font=ctk.CTkFont(size=18, weight="bold"), text_color=C_TEXT,
-                                   fg_color=C_BG, corner_radius=12, height=140, wraplength=500, justify="center")
-        self.fc_lbl.pack(fill="x", padx=16, pady=(0, 12))
-        btns = ctk.CTkFrame(card, fg_color="transparent")
-        btns.pack(pady=(0, 16))
-        ctk.CTkButton(btns, text="◀ Prev", width=100, height=38, fg_color=C_BG, hover_color=C_CARD_HOVER, command=self.prev_fc).pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="🔄 Flip", width=100, height=38, fg_color=C_ACCENT, hover_color="#6D28D9", command=self.flip_fc).pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="Next ▶", width=100, height=38, fg_color=C_BG, hover_color=C_CARD_HOVER, command=self.next_fc).pack(side="left", padx=4)
-        self.show_fc()
-
-        tips = self.card()
-        tips.pack(fill="x")
-        ctk.CTkLabel(tips, text="💡 Study Tips", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 6))
-        for t in ["Use Pomodoro: 25 min study, 5 min break", "Review notes within 24 hours of class", "Teach what you learn to someone else", "Sleep well before exams! 😴"]:
-            ctk.CTkLabel(tips, text=f"  ✨ {t}", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", padx=20, pady=3)
-        ctk.CTkLabel(tips, text="", height=8).pack()
-
-    def show_fc(self):
-        q, a = self.flashcards[self.fc_idx]
-        self.fc_lbl.configure(text=f"Q: {q}" if not self.fc_flipped else f"A: {a}")
-
-    def flip_fc(self):
-        self.fc_flipped = not self.fc_flipped
-        self.show_fc()
-
-    def next_fc(self):
-        self.fc_idx = (self.fc_idx + 1) % len(self.flashcards)
-        self.fc_flipped = False
-        self.show_fc()
-
-    def prev_fc(self):
-        self.fc_idx = (self.fc_idx - 1) % len(self.flashcards)
-        self.fc_flipped = False
-        self.show_fc()
-
-
-# ============================================================
-# GROUP PROJECTS PAGE
-# ============================================================
-class GroupProjectsPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("👥 Group Projects", "Track your collaborative work")
-        for p in data["projects"]:
-            card = self.card()
-            card.pack(fill="x", pady=6)
-            ri = ctk.CTkFrame(card, fg_color="transparent")
-            ri.pack(fill="x", padx=16, pady=14)
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", fill="x", expand=True)
-            ctk.CTkLabel(info, text=p["name"], font=ctk.CTkFont(size=15, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(info, text=f"👥 {p['members']}", font=ctk.CTkFont(size=11), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", pady=(2, 0))
-            ctk.CTkLabel(info, text=f"📅 Deadline: {p['deadline']}", font=ctk.CTkFont(size=11), text_color=C_WARNING, anchor="w").pack(anchor="w", pady=(2, 6))
-            pb = ctk.CTkProgressBar(info, progress_color=C_ACCENT, fg_color=C_BG, height=10)
-            pb.pack(fill="x")
-            pb.set(p["progress"] / 100)
-            ctk.CTkLabel(info, text=f"{p['progress']}% complete", font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", pady=(4, 0))
-            ctk.CTkButton(ri, text="📂 Open", width=90, height=38, fg_color=C_ACCENT, hover_color="#6D28D9",
-                          command=lambda n=p["name"]: messagebox.showinfo(n, f"Opening project: {n}\n\n(Default placeholder - files go here)")).pack(side="right", padx=(10, 0))
-
-
-# ============================================================
-# NOTES & FILES PAGE
-# ============================================================
-class NotesPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("📝 Notes & Files", "Your saved notes")
-        self.selected = 0
-        row = ctk.CTkFrame(self, fg_color="transparent")
-        row.pack(fill="both", expand=True)
-        # Notes list
-        self.list_card = self.card(row)
-        self.list_card.pack(side="left", fill="y", padx=(0, 8))
-        self.list_card.configure(width=200)
-        self.list_card.pack_propagate(False)
-        ctk.CTkLabel(self.list_card, text="📒 My Notes", font=ctk.CTkFont(size=13, weight="bold"), text_color=C_TEXT).pack(pady=(12, 6))
-        self.notes_btns = []
-        self.render_notes_list()
-        ctk.CTkButton(self.list_card, text="➕ New Note", fg_color=C_ACCENT, hover_color="#6D28D9",
-                      command=self.new_note).pack(fill="x", padx=12, pady=(8, 12))
-        # Editor
-        self.edit_card = self.card(row)
-        self.edit_card.pack(side="left", fill="both", expand=True)
-        self.title_entry = ctk.CTkEntry(self.edit_card, height=40, font=ctk.CTkFont(size=15, weight="bold"),
-                                        fg_color=C_BG, border_color=C_ACCENT)
-        self.title_entry.pack(fill="x", padx=14, pady=(14, 8))
-        self.text_box = ctk.CTkTextbox(self.edit_card, fg_color=C_BG, font=ctk.CTkFont(size=13), corner_radius=10)
-        self.text_box.pack(fill="both", expand=True, padx=14, pady=(0, 8))
-        btn_f = ctk.CTkFrame(self.edit_card, fg_color="transparent")
-        btn_f.pack(fill="x", padx=14, pady=(0, 14))
-        ctk.CTkButton(btn_f, text="💾 Save", fg_color=C_SUCCESS, hover_color="#059669", command=self.save_note).pack(side="left", padx=(0, 6))
-        ctk.CTkButton(btn_f, text="🗑 Delete", fg_color=C_DANGER, hover_color="#B91C1C", command=self.delete_note).pack(side="left")
-        self.load_note(0)
-
-    def render_notes_list(self):
-        for b in self.notes_btns:
-            b.destroy()
-        self.notes_btns = []
-        for i, n in enumerate(self.data["notes"]):
-            b = ctk.CTkButton(self.list_card, text=f"📄 {n['title'][:22]}", anchor="w",
-                              fg_color=C_ACCENT if i == self.selected else C_BG, hover_color=C_CARD_HOVER,
-                              text_color=C_TEXT, font=ctk.CTkFont(size=11), height=34, corner_radius=8,
-                              command=lambda idx=i: self.load_note(idx))
-            b.pack(fill="x", padx=10, pady=2)
-            self.notes_btns.append(b)
-
-    def load_note(self, idx):
-        self.selected = idx
-        n = self.data["notes"][idx]
-        self.title_entry.delete(0, "end")
-        self.title_entry.insert(0, n["title"])
-        self.text_box.delete("1.0", "end")
-        self.text_box.insert("1.0", n["content"])
-        self.render_notes_list()
-
-    def save_note(self):
-        n = self.data["notes"][self.selected]
-        n["title"] = self.title_entry.get().strip() or "Untitled"
-        n["content"] = self.text_box.get("1.0", "end").strip()
-        save_data(self.data)
-        self.render_notes_list()
-        messagebox.showinfo("Saved", "Note saved successfully! ✅")
-
-    def new_note(self):
-        self.data["notes"].append({"title": "New Note", "content": ""})
-        save_data(self.data)
-        self.selected = len(self.data["notes"]) - 1
-        self.render_notes_list()
-        self.load_note(self.selected)
-
-    def delete_note(self):
-        if len(self.data["notes"]) <= 1:
-            messagebox.showwarning("Warning", "Cannot delete the last note!")
-            return
-        if messagebox.askyesno("Delete", "Delete this note?"):
-            del self.data["notes"][self.selected]
-            save_data(self.data)
-            self.selected = 0
-            self.render_notes_list()
-            self.load_note(0)
-
-
-# ============================================================
-# GRADES PAGE
-# ============================================================
-class GradesPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("🎓 Grades", "Your academic record & GPA")
-        self.build_table()
-        self.build_gpa()
-
-    def build_table(self):
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(card, text="📋 Grade Report", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 8))
-        hdr = ctk.CTkFrame(card, fg_color=C_BG, corner_radius=8)
-        hdr.pack(fill="x", padx=16, pady=(0, 4))
-        for label, w in [("Subject", 0.4), ("Units", 0.2), ("Grade", 0.2), ("", 0.2)]:
-            ctk.CTkLabel(hdr, text=label, font=ctk.CTkFont(size=12, weight="bold"), text_color=C_TEXT_DIM, anchor="w").pack(side="left", fill="x", expand=w, padx=10, pady=8)
-        self.rows_frame = ctk.CTkFrame(card, fg_color="transparent")
-        self.rows_frame.pack(fill="x", padx=16, pady=(0, 12))
-        self.render_rows()
-        add = ctk.CTkFrame(card, fg_color="transparent")
-        add.pack(fill="x", padx=16, pady=(0, 14))
-        self.g_subj = ctk.CTkEntry(add, placeholder_text="Subject", height=36, fg_color=C_BG, border_color=C_ACCENT)
-        self.g_subj.pack(side="left", fill="x", expand=True, padx=(0, 4))
-        self.g_units = ctk.CTkEntry(add, placeholder_text="Units", width=70, height=36, fg_color=C_BG, border_color=C_ACCENT)
-        self.g_units.pack(side="left", padx=4)
-        self.g_grade = ctk.CTkEntry(add, placeholder_text="Grade", width=80, height=36, fg_color=C_BG, border_color=C_ACCENT)
-        self.g_grade.pack(side="left", padx=4)
-        ctk.CTkButton(add, text="➕ Add", width=80, height=36, fg_color=C_ACCENT, hover_color="#6D28D9", command=self.add_grade).pack(side="left", padx=(4, 0))
-
-    def render_rows(self):
-        for w in self.rows_frame.winfo_children():
-            w.destroy()
-        for i, g in enumerate(self.data["grades"]):
-            row = ctk.CTkFrame(self.rows_frame, fg_color=C_BG, corner_radius=8)
-            row.pack(fill="x", pady=2)
-            ctk.CTkLabel(row, text=g["subject"], font=ctk.CTkFont(size=12), text_color=C_TEXT, anchor="w").pack(side="left", fill="x", expand=True, padx=10, pady=8)
-            ctk.CTkLabel(row, text=str(g["units"]), font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w", width=5).pack(side="left", padx=10)
-            color = C_SUCCESS if g["grade"] <= 2.0 else (C_WARNING if g["grade"] <= 3.0 else C_DANGER)
-            ctk.CTkLabel(row, text=f"{g['grade']:.2f}", font=ctk.CTkFont(size=12, weight="bold"), text_color=color, anchor="w", width=6).pack(side="left", padx=10)
-            ctk.CTkButton(row, text="🗑", width=30, height=28, fg_color="transparent", hover_color="#3B1414", text_color=C_DANGER,
-                          command=lambda idx=i: self.del_grade(idx)).pack(side="right", padx=8)
-
-    def add_grade(self):
-        try:
-            subj = self.g_subj.get().strip()
-            units = int(self.g_units.get().strip())
-            grade = float(self.g_grade.get().strip())
-            if not subj:
-                raise ValueError
-            self.data["grades"].append({"subject": subj, "units": units, "grade": grade})
-            save_data(self.data)
-            self.render_rows()
-            self.build_gpa()
-            self.g_subj.delete(0, "end"); self.g_units.delete(0, "end"); self.g_grade.delete(0, "end")
-        except Exception:
-            messagebox.showwarning("Warning", "Invalid input! Check subject, units (number), and grade (number).")
-
-    def del_grade(self, idx):
-        if messagebox.askyesno("Delete", "Remove this grade?"):
-            del self.data["grades"][idx]
-            save_data(self.data)
-            self.render_rows()
-            self.build_gpa()
-
-    def build_gpa(self):
-        if hasattr(self, "gpa_card"):
-            self.gpa_card.destroy()
-        self.gpa_card = self.card()
-        self.gpa_card.pack(fill="x")
-        total_units = sum(g["units"] for g in self.data["grades"])
-        weighted = sum(g["units"] * g["grade"] for g in self.data["grades"])
-        gpa = weighted / total_units if total_units else 0
-        rem = "Excellent! 🌟" if gpa <= 1.5 else ("Good! 👍" if gpa <= 2.0 else ("Keep pushing! 💪" if gpa <= 2.5 else "Study harder! 📚"))
-        color = C_SUCCESS if gpa <= 2.0 else (C_WARNING if gpa <= 3.0 else C_DANGER)
-        gf = ctk.CTkFrame(self.gpa_card, fg_color="transparent")
-        gf.pack(fill="x", padx=16, pady=16)
-        ctk.CTkLabel(gf, text="🏆 General Weighted Average (GWA)", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-        ctk.CTkLabel(gf, text=f"{gpa:.2f}", font=ctk.CTkFont(size=40, weight="bold"), text_color=color, anchor="w").pack(anchor="w", pady=(4, 0))
-        ctk.CTkLabel(gf, text=f"{rem} · {total_units} units total", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-
-
-# ============================================================
-# STUDY PLANNER (POMODORO) PAGE
-# ============================================================
-class StudyPlannerPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("🎯 Study Planner", "Pomodoro timer for focused study")
-        self.mode = "Focus"  # Focus / Break
-        self.time_left = 25 * 60
-        self.running = False
-        self.timer_job = None
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        self.mode_lbl = ctk.CTkLabel(card, text="🍅 Focus Time (25 min)", font=ctk.CTkFont(size=16, weight="bold"), text_color=C_ACCENT2)
-        self.mode_lbl.pack(pady=(20, 8))
-        self.time_lbl = ctk.CTkLabel(card, text="25:00", font=ctk.CTkFont(size=60, weight="bold"), text_color=C_TEXT)
-        self.time_lbl.pack(pady=(0, 16))
-        self.progress = ctk.CTkProgressBar(card, progress_color=C_ACCENT, fg_color=C_BG, height=12)
-        self.progress.pack(fill="x", padx=40, pady=(0, 20))
-        self.progress.set(1.0)
-        btns = ctk.CTkFrame(card, fg_color="transparent")
-        btns.pack(pady=(0, 20))
-        self.start_btn = ctk.CTkButton(btns, text="▶ Start", width=110, height=42, fg_color=C_SUCCESS, hover_color="#059669",
-                                       font=ctk.CTkFont(size=13, weight="bold"), command=self.toggle_timer)
-        self.start_btn.pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="⏹ Reset", width=110, height=42, fg_color=C_DANGER, hover_color="#B91C1C",
-                      font=ctk.CTkFont(size=13, weight="bold"), command=self.reset_timer).pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="☕ Switch to Break", width=140, height=42, fg_color=C_ACCENT, hover_color="#6D28D9",
-                      font=ctk.CTkFont(size=13, weight="bold"), command=self.switch_mode).pack(side="left", padx=4)
-        # Session stats
-        stats = self.card()
-        stats.pack(fill="x")
-        ctk.CTkLabel(stats, text="📈 Today's Sessions", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 6))
-        ctk.CTkLabel(stats, text="🍅 Focus sessions completed: 3\n☕ Breaks taken: 2\n⏱ Total focus time: 75 minutes",
-                     font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w", justify="left").pack(anchor="w", padx=20, pady=(0, 14))
-
-    def toggle_timer(self):
-        if self.running:
-            self.running = False
-            self.start_btn.configure(text="▶ Resume", fg_color=C_SUCCESS)
-            if self.timer_job:
-                self.after_cancel(self.timer_job)
-        else:
-            self.running = True
-            self.start_btn.configure(text="⏸ Pause", fg_color=C_WARNING)
-            self.tick()
-
-    def tick(self):
-        if not self.running:
-            return
-        if self.time_left > 0:
-            self.time_left -= 1
-            self.update_display()
-            self.timer_job = self.after(1000, self.tick)
-        else:
-            self.running = False
-            self.start_btn.configure(text="▶ Start", fg_color=C_SUCCESS)
-            messagebox.showinfo("Time's Up!", f"{'Great focus! Take a break. ☕' if self.mode == 'Focus' else 'Break over! Back to study! 📚'}")
-            self.switch_mode()
-
-    def update_display(self):
-        m, s = divmod(self.time_left, 60)
-        self.time_lbl.configure(text=f"{m:02d}:{s:02d}")
-        total = 25 * 60 if self.mode == "Focus" else 5 * 60
-        self.progress.set(self.time_left / total)
-
-    def reset_timer(self):
-        self.running = False
-        if self.timer_job:
-            self.after_cancel(self.timer_job)
-        self.time_left = 25 * 60 if self.mode == "Focus" else 5 * 60
-        self.start_btn.configure(text="▶ Start", fg_color=C_SUCCESS)
-        self.update_display()
-
-    def switch_mode(self):
-        self.running = False
-        if self.timer_job:
-            self.after_cancel(self.timer_job)
-        if self.mode == "Focus":
-            self.mode = "Break"
-            self.time_left = 5 * 60
-            self.mode_lbl.configure(text="☕ Short Break (5 min)", text_color=C_SUCCESS)
-        else:
-            self.mode = "Focus"
-            self.time_left = 25 * 60
-            self.mode_lbl.configure(text="🍅 Focus Time (25 min)", text_color=C_ACCENT2)
-        self.start_btn.configure(text="▶ Start", fg_color=C_SUCCESS)
-        self.update_display()
-
-
-# ============================================================
-# BUDGET TRACKER PAGE
-# ============================================================
-class BudgetPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("💰 Budget Tracker", "Track your allowance & expenses")
-        self.build_summary()
-        self.build_add_form()
-        self.build_transactions()
-
-    def build_summary(self):
-        b = self.data["budget"]
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=16)
-        for label, val, col in [("💵 Balance", f"₱{b['balance']:.2f}", C_SUCCESS),
-                                ("📥 Income", f"₱{b['income']:.2f}", C_ACCENT2),
-                                ("📤 Expenses", f"₱{b['expenses']:.2f}", C_DANGER)]:
-            box = ctk.CTkFrame(row, fg_color=C_BG, corner_radius=12)
-            box.pack(side="left", fill="x", expand=True, padx=4)
-            ctk.CTkLabel(box, text=label, font=ctk.CTkFont(size=11), text_color=C_TEXT_DIM).pack(pady=(10, 2))
-            ctk.CTkLabel(box, text=val, font=ctk.CTkFont(size=18, weight="bold"), text_color=col).pack(pady=(0, 10))
-
-    def build_add_form(self):
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(card, text="➕ Add Transaction", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 8))
-        row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=(0, 14))
-        self.t_type = ctk.CTkComboBox(row, values=["Income", "Expense"], height=38, fg_color=C_BG, button_color=C_ACCENT)
-        self.t_type.set("Expense")
-        self.t_type.pack(side="left", padx=(0, 6))
-        self.t_desc = ctk.CTkEntry(row, placeholder_text="Description", height=38, fg_color=C_BG, border_color=C_ACCENT)
-        self.t_desc.pack(side="left", fill="x", expand=True, padx=6)
-        self.t_amt = ctk.CTkEntry(row, placeholder_text="Amount (₱)", width=140, height=38, fg_color=C_BG, border_color=C_ACCENT)
-        self.t_amt.pack(side="left", padx=6)
-        ctk.CTkButton(row, text="Add", width=80, height=38, fg_color=C_ACCENT, hover_color="#6D28D9", command=self.add_trans).pack(side="left", padx=(6, 0))
-
-    def build_transactions(self):
-        card = self.card()
-        card.pack(fill="x")
-        ctk.CTkLabel(card, text="📜 Transaction History", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 6))
-        self.trans_frame = ctk.CTkFrame(card, fg_color="transparent")
-        self.trans_frame.pack(fill="x", padx=16, pady=(0, 14))
-        self.render_trans()
-
-    def render_trans(self):
-        for w in self.trans_frame.winfo_children():
-            w.destroy()
-        for t in self.data["budget"]["transactions"][::-1]:
-            row = ctk.CTkFrame(self.trans_frame, fg_color=C_BG, corner_radius=8)
-            row.pack(fill="x", pady=2)
-            ri = ctk.CTkFrame(row, fg_color="transparent")
-            ri.pack(fill="x", padx=12, pady=8)
-            icon = "📥" if t["type"] == "Income" else "📤"
-            col = C_SUCCESS if t["type"] == "Income" else C_DANGER
-            ctk.CTkLabel(ri, text=icon, font=ctk.CTkFont(size=16)).pack(side="left")
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", padx=(10, 0), fill="x", expand=True)
-            ctk.CTkLabel(info, text=t["desc"], font=ctk.CTkFont(size=12, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(info, text=t["date"], font=ctk.CTkFont(size=10), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-            sign = "+" if t["type"] == "Income" else "-"
-            ctk.CTkLabel(ri, text=f"{sign}₱{t['amount']:.2f}", font=ctk.CTkFont(size=13, weight="bold"), text_color=col).pack(side="right")
-
-    def add_trans(self):
-        try:
-            amt = float(self.t_amt.get().strip())
-            desc = self.t_desc.get().strip() or "Unnamed"
-            typ = self.t_type.get()
-            today = datetime.date.today().strftime("%b %d, %Y")
-            self.data["budget"]["transactions"].append({"type": typ, "desc": desc, "amount": amt, "date": today})
-            if typ == "Income":
-                self.data["budget"]["income"] += amt
-                self.data["budget"]["balance"] += amt
-            else:
-                self.data["budget"]["expenses"] += amt
-                self.data["budget"]["balance"] -= amt
-            save_data(self.data)
-            self.t_desc.delete(0, "end"); self.t_amt.delete(0, "end")
-            self.build_summary()
-            self.render_trans()
-        except Exception:
-            messagebox.showwarning("Warning", "Please enter a valid amount!")
-
-
-# ============================================================
-# SETTINGS PAGE
-# ============================================================
-class SettingsPage(BasePage):
-    def __init__(self, master, data, navigate, app=None):
-        super().__init__(master, data, navigate, app)
-        self.header("⚙️ Settings", "Manage your profile & preferences")
-        # Profile
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(card, text="👤 Profile", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 8))
-        f = ctk.CTkFrame(card, fg_color="transparent")
-        f.pack(fill="x", padx=16, pady=(0, 14))
-        ctk.CTkLabel(f, text="Name:", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, width=80, anchor="w").pack(side="left")
-        self.name_e = ctk.CTkEntry(f, height=38, fg_color=C_BG, border_color=C_ACCENT)
-        self.name_e.insert(0, data["user"]["name"])
-        self.name_e.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        f2 = ctk.CTkFrame(card, fg_color="transparent")
-        f2.pack(fill="x", padx=16, pady=(0, 14))
-        ctk.CTkLabel(f2, text="Course:", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, width=80, anchor="w").pack(side="left")
-        self.course_e = ctk.CTkEntry(f2, height=38, fg_color=C_BG, border_color=C_ACCENT)
-        self.course_e.insert(0, data["user"]["course"])
-        self.course_e.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        f3 = ctk.CTkFrame(card, fg_color="transparent")
-        f3.pack(fill="x", padx=16, pady=(0, 14))
-        ctk.CTkLabel(f3, text="Password:", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, width=80, anchor="w").pack(side="left")
-        self.pw_e = ctk.CTkEntry(f3, height=38, fg_color=C_BG, border_color=C_ACCENT, show="•")
-        self.pw_e.insert(0, data["user"]["password"])
-        self.pw_e.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        ctk.CTkButton(card, text="💾 Save Profile", fg_color=C_ACCENT, hover_color="#6D28D9", command=self.save_profile).pack(anchor="w", padx=16, pady=(0, 14))
-        # About
-        about = self.card()
-        about.pack(fill="x")
-        ctk.CTkLabel(about, text="ℹ️ About StudyMate PH", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 6))
-        ctk.CTkLabel(about, text="Version 1.0 · Built with Python + CustomTkinter\nPlan · Study · Achieve 🎓",
-                     font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w", justify="left").pack(anchor="w", padx=16, pady=(0, 14))
-
-    def save_profile(self):
-        self.data["user"]["name"] = self.name_e.get().strip() or "User"
-        self.data["user"]["course"] = self.course_e.get().strip() or "Student"
-        self.data["user"]["password"] = self.pw_e.get().strip() or "1234"
-        save_data(self.data)
-        self.app.name_lbl.configure(text=self.data["user"]["name"])
-        self.app.course_lbl.configure(text=self.data["user"]["course"])
-        messagebox.showinfo("Saved", "Profile updated successfully! ✅")
-
-
-# ============================================================
-# DEADLINE REMINDER PAGE
-# ============================================================
-class DeadlineReminderPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("🔔 Deadline Reminder", "Upcoming deadlines with countdown")
-        for d in sorted(data["deadlines"], key=lambda x: x["days_left"]):
-            card = self.card()
-            card.pack(fill="x", pady=5)
-            ri = ctk.CTkFrame(card, fg_color="transparent")
-            ri.pack(fill="x", padx=16, pady=14)
-            urgency = C_DANGER if d["days_left"] <= 2 else (C_WARNING if d["days_left"] <= 5 else C_SUCCESS)
-            ctk.CTkLabel(ri, text="📄", font=ctk.CTkFont(size=24), fg_color=d["color"], corner_radius=10, width=44, height=44).pack(side="left")
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", padx=(12, 0), fill="x", expand=True)
-            ctk.CTkLabel(info, text=d["title"], font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(info, text=f"📅 Due: {d['due']}", font=ctk.CTkFont(size=11), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(ri, text=f"⏰ {d['days_left']} days left", font=ctk.CTkFont(size=13, weight="bold"),
-                         text_color=urgency, fg_color="#2A1F10" if urgency == C_WARNING else ("#2A1010" if urgency == C_DANGER else "#102A1A"),
-                         corner_radius=10).pack(side="right")
-
-
-# ============================================================
-# MISSED TASK RECOVERY PAGE
-# ============================================================
-class MissedTaskPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("♻️ Missed Task Recovery", "Recover and reschedule overdue tasks")
-        overdue = [t for t in data["tasks"] if t["overdue"] and not t["done"]]
-        if not overdue:
-            card = self.card()
-            card.pack(fill="x", pady=20)
-            ctk.CTkLabel(card, text="🎉 No missed tasks! You're all caught up!", font=ctk.CTkFont(size=15), text_color=C_SUCCESS).pack(pady=30)
-            return
-        for t in overdue:
-            card = self.card()
-            card.pack(fill="x", pady=5)
-            ri = ctk.CTkFrame(card, fg_color="transparent")
-            ri.pack(fill="x", padx=16, pady=12)
-            ctk.CTkLabel(ri, text="🔴", font=ctk.CTkFont(size=20)).pack(side="left")
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", padx=(10, 0), fill="x", expand=True)
-            ctk.CTkLabel(info, text=t["title"], font=ctk.CTkFont(size=13, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(info, text=f"Was due: {t['due']}", font=ctk.CTkFont(size=11), text_color=C_DANGER, anchor="w").pack(anchor="w")
-            ctk.CTkButton(ri, text="♻️ Recover", width=100, height=36, fg_color=C_SUCCESS, hover_color="#059669",
-                          command=lambda tid=t["id"]: self.recover(tid)).pack(side="right", padx=(6, 0))
-            ctk.CTkButton(ri, text="✅ Done", width=80, height=36, fg_color=C_ACCENT, hover_color="#6D28D9",
-                          command=lambda tid=t["id"]: self.mark_done(tid)).pack(side="right")
-
-    def recover(self, tid):
-        for t in self.data["tasks"]:
-            if t["id"] == tid:
-                t["overdue"] = False
-                t["due"] = datetime.date.today().strftime("%b %d, %Y") + " (rescheduled)"
-        save_data(self.data)
-        messagebox.showinfo("Recovered", "Task recovered and rescheduled to today! ✅")
-        self.navigate("My Tasks")
-
-    def mark_done(self, tid):
-        for t in self.data["tasks"]:
-            if t["id"] == tid:
-                t["done"] = True
-                t["overdue"] = False
-        save_data(self.data)
-        messagebox.showinfo("Done", "Marked as completed! ✅")
-        self.navigate("My Tasks")
-
-
-# ============================================================
-# EXPORT REPORTS PAGE
-# ============================================================
-class ExportReportsPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("📤 Export Reports", "Download your data as CSV files")
-        options = [
-            ("📋 Tasks Report", "tasks", "Export all your tasks"),
-            ("⏰ Deadlines Report", "deadlines", "Export upcoming deadlines"),
-            ("🎓 Grades Report", "grades", "Export your grade report"),
-            ("💰 Budget Report", "budget", "Export your transactions"),
-        ]
-        for label, key, desc in options:
-            card = self.card()
-            card.pack(fill="x", pady=5)
-            ri = ctk.CTkFrame(card, fg_color="transparent")
-            ri.pack(fill="x", padx=16, pady=12)
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", fill="x", expand=True)
-            ctk.CTkLabel(info, text=label, font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(info, text=desc, font=ctk.CTkFont(size=11), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-            ctk.CTkButton(ri, text="📥 Export CSV", width=130, height=38, fg_color=C_ACCENT, hover_color="#6D28D9",
-                          command=lambda k=key: self.export(k)).pack(side="right")
-
-    def export(self, key):
-        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")],
-                                            initialfile=f"studymate_{key}.csv")
-        if not path:
-            return
-        try:
-            with open(path, "w", newline="") as f:
-                w = csv.writer(f)
-                if key == "tasks":
-                    w.writerow(["Title", "Due Date", "Category", "Status"])
-                    for t in self.data["tasks"]:
-                        status = "Done" if t["done"] else ("Overdue" if t["overdue"] else "Pending")
-                        w.writerow([t["title"], t["due"], t["category"], status])
-                elif key == "deadlines":
-                    w.writerow(["Title", "Due Date", "Days Left"])
-                    for d in self.data["deadlines"]:
-                        w.writerow([d["title"], d["due"], d["days_left"]])
-                elif key == "grades":
-                    w.writerow(["Subject", "Units", "Grade"])
-                    for g in self.data["grades"]:
-                        w.writerow([g["subject"], g["units"], g["grade"]])
-                elif key == "budget":
-                    w.writerow(["Type", "Description", "Amount", "Date"])
-                    for t in self.data["budget"]["transactions"]:
-                        w.writerow([t["type"], t["desc"], t["amount"], t["date"]])
-            messagebox.showinfo("Exported", f"Report saved to:\n{path} ✅")
-        except Exception as e:
-            messagebox.showerror("Error", f"Export failed: {e}")
-
-
-# ============================================================
-# TIME ESTIMATOR PAGE
-# ============================================================
-class TimeEstimatorPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("⏱️ Time Estimator", "Estimate how long a task will take")
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        f = ctk.CTkFrame(card, fg_color="transparent")
-        f.pack(fill="x", padx=16, pady=16)
-        ctk.CTkLabel(f, text="Task type:", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-        self.task_type = ctk.CTkComboBox(f, values=["Assignment", "Project", "Research Paper", "Quiz Review", "Essay", "Lab Report"],
-                                         height=40, fg_color=C_BG, button_color=C_ACCENT)
-        self.task_type.set("Assignment")
-        self.task_type.pack(fill="x", pady=(4, 12))
-        ctk.CTkLabel(f, text="Difficulty (1-5):", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-        self.diff = ctk.CTkSlider(f, from_=1, to=5, number_of_steps=4, progress_color=C_ACCENT, button_color=C_ACCENT2)
-        self.diff.set(3)
-        self.diff.pack(fill="x", pady=(4, 12))
-        self.diff_lbl = ctk.CTkLabel(f, text="Difficulty: 3", font=ctk.CTkFont(size=12), text_color=C_TEXT)
-        self.diff_lbl.pack(anchor="w")
-        self.diff.configure(command=lambda v: self.diff_lbl.configure(text=f"Difficulty: {int(v)}"))
-        ctk.CTkButton(f, text="🔮 Estimate Time", height=42, fg_color=C_ACCENT, hover_color="#6D28D9",
-                      font=ctk.CTkFont(size=13, weight="bold"), command=self.estimate).pack(fill="x", pady=(12, 0))
-        self.result = ctk.CTkLabel(card, text="", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_SUCCESS, justify="center")
-        self.result.pack(pady=(0, 16))
-
-    def estimate(self):
-        base = {"Assignment": 2, "Project": 8, "Research Paper": 12, "Quiz Review": 3, "Essay": 4, "Lab Report": 3}
-        hours = base[self.task_type.get()] * int(self.diff.get()) * 0.7
-        self.result.configure(text=f"⏱ Estimated time: ~{hours:.1f} hours\n📅 Start at least {max(1, int(hours/4))} days before deadline!")
-
-
-# ============================================================
-# AI STUDY ASSISTANT PAGE (keyword-based)
-# ============================================================
-class AIAssistantPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("🤖 AI Study Assistant", "Ask me anything about studying!")
-        self.chat_box = ctk.CTkTextbox(self, fg_color=C_CARD, font=ctk.CTkFont(size=12), corner_radius=12, height=340)
-        self.chat_box.pack(fill="x", pady=(0, 10))
-        self.chat_box.insert("1.0", "🤖 Hi! I'm your AI Study Assistant. Ask me about:\n- Study tips\n- Time management\n- Stress relief\n- Exam preparation\n- Motivation\n\nTry: 'How do I focus better?'\n\n")
-        self.chat_box.configure(state="disabled")
-        row = ctk.CTkFrame(self, fg_color="transparent")
-        row.pack(fill="x")
-        self.query = ctk.CTkEntry(row, placeholder_text="Type your question...", height=42, fg_color=C_BG, border_color=C_ACCENT)
-        self.query.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        self.query.bind("<Return>", lambda e: self.send())
-        ctk.CTkButton(row, text="➤ Send", width=90, height=42, fg_color=C_ACCENT, hover_color="#6D28D9", command=self.send).pack(side="left")
-
-    def send(self):
-        q = self.query.get().strip().lower()
-        if not q:
-            return
-        self.query.delete(0, "end")
-        self.chat_box.configure(state="normal")
-        self.chat_box.insert("end", f"\n👤 You: {q}\n")
-        resp = self.respond(q)
-        self.chat_box.insert("end", f"🤖 AI: {resp}\n")
-        self.chat_box.see("end")
-        self.chat_box.configure(state="disabled")
-
-    def respond(self, q):
-        if any(w in q for w in ["focus", "concentrate", "distract"]):
-            return "Try the Pomodoro technique! Study 25 min, break 5 min. Put your phone away and use Focus Mode. Clear your desk before starting. 🎯"
-        elif any(w in q for w in ["time", "manage", "schedule", "procrastinat"]):
-            return "Use your Study Planner! Break big tasks into small ones. Use the 2-minute rule - if it takes <2 min, do it now. Plan your day every morning. ⏰"
-        elif any(w in q for w in ["stress", "anxious", "tired", "burnout", "sleep"]):
-            return "Take care of yourself! Sleep 7-8 hours, drink water, take short walks. Don't forget to rest - your brain needs it. You're doing great! 💚"
-        elif any(w in q for w in ["exam", "test", "quiz", "review", "cram"]):
-            return "Start reviewing early! Use active recall and flashcards in Study Space. Teach the material to someone. Check Exam Countdown for your schedule. 📚"
-        elif any(w in q for w in ["motivat", "lazy", "tired of", "give up"]):
-            return "Remember your goals! Small steps every day lead to big results. You've come this far - keep going! Your future self will thank you. 🌟"
-        elif any(w in q for w in ["note", "notes"]):
-            return "Use the Cornell method! Divide your notes into cues, notes, and summary. Review them within 24 hours. Check your Notes & Files. 📝"
-        elif any(w in q for w in ["hello", "hi", "hey", "kumusta", "musta"]):
-            return "Hello! I'm here to help you study better. What do you need help with? 😊"
-        elif any(w in q for w in ["thank", "salamat"]):
-            return "You're welcome! Good luck with your studies! 💪"
-        else:
-            tips = ["Try breaking your task into smaller steps!", "Take a 5-minute break to recharge.", "Write down your goal where you can see it.", "Use the Study Planner to stay on track."]
-            return random.choice(tips) + " (Ask me about focus, time management, exams, or motivation!)"
-
-
-# ============================================================
-# EXAM COUNTDOWN PAGE
-# ============================================================
-class ExamCountdownPage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("📆 Exam Countdown", "Days until your exams")
-        self.today = datetime.date(2025, 4, 29)
-        card = self.card()
-        card.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(card, text="➕ Add Exam", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 8))
-        row = ctk.CTkFrame(card, fg_color="transparent")
-        row.pack(fill="x", padx=16, pady=(0, 14))
-        self.ex_subj = ctk.CTkEntry(row, placeholder_text="Subject", height=38, fg_color=C_BG, border_color=C_ACCENT)
-        self.ex_subj.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        self.ex_date = ctk.CTkEntry(row, placeholder_text="Date (YYYY-MM-DD)", width=180, height=38, fg_color=C_BG, border_color=C_ACCENT)
-        self.ex_date.pack(side="left", padx=6)
-        ctk.CTkButton(row, text="Add", width=80, height=38, fg_color=C_ACCENT, hover_color="#6D28D9", command=self.add_exam).pack(side="left", padx=(6, 0))
-        self.list_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.list_frame.pack(fill="x")
-        self.render_exams()
-
-    def render_exams(self):
-        for w in self.list_frame.winfo_children():
-            w.destroy()
-        for e in sorted(self.data["exams"], key=lambda x: x["date"]):
-            try:
-                edate = datetime.datetime.strptime(e["date"], "%Y-%m-%d").date()
-                days = (edate - self.today).days
-            except Exception:
-                days = "?"
-            card = self.card(self.list_frame)
-            card.pack(fill="x", pady=4)
-            ri = ctk.CTkFrame(card, fg_color="transparent")
-            ri.pack(fill="x", padx=16, pady=12)
-            color = C_DANGER if isinstance(days, int) and days <= 3 else (C_WARNING if isinstance(days, int) and days <= 7 else C_SUCCESS)
-            ctk.CTkLabel(ri, text="📖", font=ctk.CTkFont(size=22)).pack(side="left")
-            info = ctk.CTkFrame(ri, fg_color="transparent")
-            info.pack(side="left", padx=(10, 0), fill="x", expand=True)
-            ctk.CTkLabel(info, text=e["subject"], font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(info, text=f"📅 {e['date']}", font=ctk.CTkFont(size=11), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w")
-            ctk.CTkLabel(ri, text=f"⏳ {days} days", font=ctk.CTkFont(size=15, weight="bold"), text_color=color).pack(side="right")
-
-    def add_exam(self):
-        subj = self.ex_subj.get().strip()
-        date = self.ex_date.get().strip()
-        if not subj or not date:
-            messagebox.showwarning("Warning", "Fill in both subject and date!")
-            return
-        self.data["exams"].append({"subject": subj, "date": date})
-        save_data(self.data)
-        self.ex_subj.delete(0, "end"); self.ex_date.delete(0, "end")
-        self.render_exams()
-
-
-# ============================================================
-# FOCUS MODE PAGE
-# ============================================================
-class FocusModePage(BasePage):
-    def __init__(self, master, data, navigate):
-        super().__init__(master, data, navigate)
-        self.header("🌙 Focus Mode", "Distraction-free deep work session")
-        self.time_left = 50 * 60
-        self.running = False
-        self.job = None
-        card = ctk.CTkFrame(self, fg_color="#0A0A14", corner_radius=18)
-        card.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(card, text="🎯 Deep Focus Session", font=ctk.CTkFont(size=18, weight="bold"), text_color=C_TEXT).pack(pady=(24, 6))
-        ctk.CTkLabel(card, text="Put your phone away. No distractions. Just you and your work.",
-                     font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM).pack(pady=(0, 16))
-        self.focus_lbl = ctk.CTkLabel(card, text="50:00", font=ctk.CTkFont(size=56, weight="bold"), text_color=C_ACCENT2)
-        self.focus_lbl.pack(pady=(0, 16))
-        self.focus_pb = ctk.CTkProgressBar(card, progress_color=C_ACCENT2, fg_color=C_CARD, height=10)
-        self.focus_pb.pack(fill="x", padx=60, pady=(0, 20))
-        self.focus_pb.set(1.0)
-        btns = ctk.CTkFrame(card, fg_color="transparent")
-        btns.pack(pady=(0, 24))
-        self.f_start = ctk.CTkButton(btns, text="▶ Start Focus", width=130, height=44, fg_color=C_ACCENT2, hover_color="#2563EB",
-                                     font=ctk.CTkFont(size=13, weight="bold"), command=self.toggle)
-        self.f_start.pack(side="left", padx=4)
-        ctk.CTkButton(btns, text="⏹ Reset", width=110, height=44, fg_color=C_DANGER, hover_color="#B91C1C",
-                      font=ctk.CTkFont(size=13, weight="bold"), command=self.reset).pack(side="left", padx=4)
-        tips = self.card()
-        tips.pack(fill="x")
-        ctk.CTkLabel(tips, text="🧘 Focus Tips", font=ctk.CTkFont(size=14, weight="bold"), text_color=C_TEXT, anchor="w").pack(anchor="w", padx=16, pady=(12, 6))
-        for t in ["Silence all notifications", "Keep only one tab/window open", "Have water nearby to avoid getting up", "Set a clear goal for this session"]:
-            ctk.CTkLabel(tips, text=f"  ✅ {t}", font=ctk.CTkFont(size=12), text_color=C_TEXT_DIM, anchor="w").pack(anchor="w", padx=20, pady=2)
-        ctk.CTkLabel(tips, text="", height=8).pack()
-
-    def toggle(self):
-        if self.running:
-            self.running = False
-            self.f_start.configure(text="▶ Resume", fg_color=C_ACCENT2)
-            if self.job:
-                self.after_cancel(self.job)
-        else:
-            self.running = True
-            self.f_start.configure(text="⏸ Pause", fg_color=C_WARNING)
-            self.tick()
-
-    def tick(self):
-        if not self.running:
-            return
-        if self.time_left > 0:
-            self.time_left -= 1
-            m, s = divmod(self.time_left, 60)
-            self.focus_lbl.configure(text=f"{m:02d}:{s:02d}")
-            self.focus_pb.set(self.time_left / (50 * 60))
-            self.job = self.after(1000, self.tick)
-        else:
-            self.running = False
-            self.f_start.configure(text="▶ Start Focus", fg_color=C_ACCENT2)
-            messagebox.showinfo("Focus Complete!", "Amazing! You completed a 50-minute deep focus session! 🎉 Take a well-deserved break. ☕")
-
-    def reset(self):
-        self.running = False
-        if self.job:
-            self.after_cancel(self.job)
-        self.time_left = 50 * 60
-        self.focus_lbl.configure(text="50:00")
-        self.focus_pb.set(1.0)
-        self.f_start.configure(text="▶ Start Focus", fg_color=C_ACCENT2)
-
-
-# ============================================================
-# APP CONTROLLER (loading -> login -> main)
-# ============================================================
-class AppController(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.data = load_data()
-        self.title("StudyMate PH")
-        self.geometry("1100x720")
-        self.minsize(900, 620)
-        self.configure(fg_color=C_BG)
-        cap = make_grad_cap_image(64)
-        try:
-            self._icon_ref2 = ImageTk.PhotoImage(cap)
-            self.iconphoto(False, self._icon_ref2)
-        except Exception:
-            pass
-        self.current = None
-        self.show_loading()
-
-    def clear(self):
-        if self.current:
-            self.current.destroy()
-
-    def show_loading(self):
-        self.clear()
-        self.current = LoadingScreen(self, self.show_login)
-
-    def show_login(self):
-        self.clear()
-        self.current = LoginScreen(self, self.data, self.show_main)
-
-    def show_main(self):
-        self.clear()
-        self.current = StudyMateApp(self, self.data)
-
-
-if __name__ == "__main__":
-    ctk.set_appearance_mode("dark")
-    controller = AppController()
-    controller.mainloop()
+        .then(data => {
+            if (!Array.isArray(data)) return;
+            budget = data;
+            renderBudget();
+        });
+}
+
+function saveBudget() {
+    const type = document.getElementById('budgType').value;
+    const category = document.getElementById('budgCat').value.trim() || 'General';
+    const amount = parseFloat(document.getElementById('budgAmt').value);
+    
+    if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount!'); return; }
+    
+    const data = { type, category, amount, description: document.getElementById('budgDesc').value };
+    
+    fetch('/api/budget', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(() => {
+        closeModal('addBudgetModal');
+        document.getElementById('addBudgetModal').querySelectorAll('input, select').forEach(el => el.value = '');
+        loadBudget();
+    });
+}
+
+function deleteBudget(id) {
+    if (!confirm('Delete this transaction?')) return;
+    fetch(/api/budget?id=${id}, {method: 'DELETE'})
+        .then(res => res.json())
+        .then(() => loadBudget());
+}
+
+function renderBudget() {
+    let totalIncome = 0, totalExpense = 0;
+    budget.forEach(b => {
+        if (b.type === 'income') totalIncome += b.amount;
+        else totalExpense += b.amount;
+    });
+    const balance = totalIncome - totalExpense;
+    
+    document.getElementById('budgetBalance').textContent = ₱${balance.toFixed(2)};
+    document.getElementById('totalIncome').textContent = +₱${totalIncome.toFixed(2)};
+    document.getElementById('totalExpense').textContent = -₱${totalExpense.toFixed(2)};
+    
+    const container = document.getElementById('budgetList');
+    if (budget.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>💰</span>No transactions yet.</div>';
+        return;
+    }
+    
+    container.innerHTML = budget.map(b => `
+        <div class="card" style="margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: 500;">${b.category}</div>
+                    <div style="font-size: 12px; color: var(--muted);">${b.description || 'No note'} · ${new Date(b.recorded_at).toLocaleDateString('en-PH')}</div>
+                </div>
+                <div style="font-weight: 600; color: ${b.type === 'income' ? 'var(--success)' : 'var(--danger)'};">
+                    ${b.type === 'income' ? '+' : '-'}₱${b.amount.toFixed(2)}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// --- STUDY PLANNER / GOALS ---
+function loadGoals() {
+    fetch('/api/planner')
+        .then(res => res.json())
+        .then(data => {
+            goals = data;
+            renderGoals();
+        });
+}
+
+function saveGoal() {
+    const goal = document.getElementById('goalText').value.trim();
+    if (!goal) { alert('Please write your goal!'); return; }
+    
+    const data = {
+        goal: goal,
+        target_date: document.getElementById('goalDate').value
+    };
+    
+    fetch('/api/planner', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(() => {
+        closeModal('addGoalModal');
+        document.getElementById('goalText').value = '';
+        document.getElementById('goalDate').value = '';
+        loadGoals();
+    });
+}
+
+function updateGoalProgress(id, progress) {
+    fetch('/api/planner', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id, progress: progress})
+    })
+    .then(res => res.json())
+    .then(() => loadGoals());
+}
+
+function deleteGoal(id) {
+    if (!confirm('Delete this goal?')) return;
+    fetch(/api/planner?id=${id}, {method: 'DELETE'})
+        .then(res => res.json())
+        .then(() => loadGoals());
+}
+
+function renderGoals() {
+    const container = document.getElementById('goalsList');
+    
+    if (goals.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>🎯</span>No study goals yet. Set one to stay motivated!</div>';
+        return;
+    }
+    
+    container.innerHTML = goals.map(g => `
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; font-size: 15px;">${g.goal}</div>
+                    ${g.target_date ? <div style="font-size: 12px; color: var(--muted);">Target: ${new Date(g.target_date).toLocaleDateString('en-PH')}</div> : ''}
+                </div>
+                <div style="font-weight: 600; color: var(--primary);">${g.progress}%</div>
+            </div>
+            <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                <div style="height: 100%; width: ${g.progress}%; background: var(--gradient); border-radius: 4px; transition: width 0.3s;"></div>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button class="btn btn-sm" style="padding: 4px 8px; font-size: 12px;" onclick="updateGoalProgress(${g.id}, Math.max(0, ${g.progress}-10))">-10%</button>
+                <button class="btn btn-sm" style="padding: 4px 8px; font-size: 12px;" onclick="updateGoalProgress(${g.id}, Math.min(100, ${g.progress}+10))">+10%</button>
+                <button class="btn btn-success btn-sm" style="margin-left: auto; padding: 4px 10px; font-size: 12px;" onclick="updateGoalProgress(${g.id}, 100)">✓ Done!</button>
+                <button class="btn btn-danger btn-sm" style="padding: 4px 8px; font-size: 12px;" onclick="deleteGoal(${g.id})">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// --- PREMIUM & PAYMENT SYSTEM ---
+function loadPremiumStatus() {
+    fetch('/api/premium/status')
+        .then(res => res.json())
+        .then(data => {
+            isPremium = data.is_premium;
+            updatePremiumUI();
+            
+            if (isPremium) {
+                document.getElementById('premiumInactive').style.display = 'none';
+                document.getElementById('premiumActive').style.display = 'block';
+                document.getElementById('premiumExpiryText').textContent = Valid until: ${data.expiry_date ? new Date(data.expiry_date).toLocaleDateString('en-PH') : '--'};
+                document.getElementById('premiumCountdown').innerHTML = Your Premium expires in: <strong>${data.days_left} days</strong>;
+            } else {
+                document.getElementById('premiumInactive').style.display = 'block';
+                document.getElementById('premiumActive').style.display = 'none';
+            }
+        });
+}
+
+function generateReference() {
+    fetch('/api/premium/request', {method: 'POST'})
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                referenceId = data.reference_id;
+                document.getElementById('refIdDisplay').value = referenceId;
+                document.getElementById('paymentStatusText').textContent = ✅ Reference ID generated! Send ₱${data.amount} via GCash.;
+                document.getElementById('paymentStatusText').style.color = 'var(--success)';
+            }
+        });
+}
+
+function submitPaymentConfirmation() {
+    const refVal = document.getElementById('refIdDisplay').value.trim();
+    if (!refVal) {
+        alert('Please generate a Reference ID first!');
+        return;
+    }
+    
+    fetch('/api/premium/confirm-payment', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({reference_id: refVal})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('paymentStatusText').textContent = '✅ Payment submitted! Waiting for Admin approval...';
+            document.getElementById('paymentStatusText').style.color = 'var(--success)';
+        } else {
+            document.getElementById('paymentStatusText').textContent = '❌ ' + data.error;
+            document.getElementById('paymentStatusText').style.color = 'var(--danger)';
+        }
+    });
+}
+
+// Auto-refresh premium status when opening premium page
+document.addEventListener('click', function(e) {
+    if (e.target.closest('[onclick*="navigateTo(\'premium\')"]')) {
+        setTimeout(loadPremiumStatus, 100);
+    }
+});
+
+</script>
+</body>
+</html>
+'''
+
+# ==================== RUN APP ====================
+if __name__ == '__main__':
+    init_db()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
