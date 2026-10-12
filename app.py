@@ -2298,25 +2298,51 @@ function fallbackCopy(text, cb) {
 }
 
 function openGcashApp() {
-    // Auto-copy ang number sa clipboard, subukang buksan ang GCash app.
-    // Ang ₱50.00 ay fixed — ipinapaalala sa user.
+    // Auto-copy ang number sa clipboard
     const raw = (document.getElementById('gcNumber')?.textContent || '').replace(/-/g, '').trim();
-    if (raw) {
-        try { navigator.clipboard && navigator.clipboard.writeText(raw); } catch(e) {}
-    }
-    try {
-        window.location.href = 'gcash://';
-    } catch(e) {}
-    setTimeout(() => {
-        if (!document.hidden) {
-            alert('📱 GCash — ₱50.00 (fixed)\n\n' +
-                  (raw ? '✅ Number nakopy na: ' + raw + '\n' : '') +
-                  '1. Sa GCash: Send Money → Express Send\n' +
-                  '2. I-paste ang number (kung hindi pa)\n' +
-                  '3. Amount: ₱50.00 (eksakto — huwag palitan)\n' +
-                  '4. Ilagay ang Reference ID sa message');
+    if (raw) { try { navigator.clipboard && navigator.clipboard.writeText(raw); } catch(e) {} }
+
+    const ua = navigator.userAgent || '';
+    const isAndroid = /Android/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+    const stepsMsg = (raw ? '✅ Number nakopy na: ' + raw + '\n' : '') +
+        'Amount: ₱50.00 (FIXED — huwag palitan)\n\n' +
+        'Sa GCash app:\n' +
+        '1. Send Money → Express Send\n' +
+        '2. I-paste ang number (kung hindi pa)\n' +
+        '3. Amount: ₱50.00\n' +
+        '4. Ilagay ang Reference ID sa message';
+
+    // Fallback: kung hindi bumukas ang app after 2.5s, mag-alert at mag-offer ng store link
+    const start = Date.now();
+    const fallbackTimer = setTimeout(() => {
+        if (!document.hidden && Date.now() - start < 3500) {
+            if (confirm('📱 Hindi bumukas ang GCash app.\n\n' + stepsMsg + '\n\nI-download ang GCash mula sa store?')) {
+                if (isAndroid) window.location.href = 'https://play.google.com/store/apps/details?id=com.globe.gcash.android';
+                else if (isIOS) window.location.href = 'https://apps.apple.com/ph/app/gcash/id520010805';
+            }
         }
-    }, 1500);
+    }, 2500);
+
+    // Cancel fallback kapag lumipat na sa app (nag-hidden ang page)
+    const visHandler = () => { if (document.hidden) { clearTimeout(fallbackTimer); document.removeEventListener('visibilitychange', visHandler); } };
+    document.addEventListener('visibilitychange', visHandler);
+
+    if (isAndroid) {
+        // Android: intent:// pinaka-reliable — bubukas ang app, o Play Store kung hindi naka-install
+        try { window.location.href = 'intent://#Intent;scheme=gcash;package=com.globe.gcash.android;end'; } catch(e) {}
+    } else {
+        // iOS / iba: hidden iframe trick para walang error page kung walang app
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+        try { iframe.src = 'gcash://'; } catch(e) {}
+        setTimeout(() => {
+            if (!document.hidden) { try { window.location.href = 'gcash://'; } catch(e) {} }
+        }, 150);
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch(e) {} }, 4000);
+    }
 }
 
 // --- PREMIUM & PAYMENT SYSTEM ---
