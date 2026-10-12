@@ -4,16 +4,15 @@ import os
 import datetime
 import uuid
 import hashlib
-# FIX: tinanggal ang "from dateutil.relativedelta import relativedelta" (hindi ginagamit, at nag-e-error kung wala ang package)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
 DATABASE = "taskhive.db"
 PREMIUM_PRICE = 50.00
 PREMIUM_DAYS = 30
-GCASH_NUMBER = "0917-123-4567"  # Palitan mo ng totoong GCash number mo
-GCASH_NAME = "Juan Dela Cruz"
-ADMIN_KEY = os.environ.get("ADMIN_KEY", "")  # FIX: para sa pag-activate ng Premium (tingnan ang /api/premium/approve)
+GCASH_NUMBER = "0930-132-9437"
+GCASH_NAME = "Pangalan Mo Dito"  # Ilagay ang pangalang nakarehistro sa GCash mo
+ADMIN_KEY = os.environ.get("ADMIN_KEY", "")  # Para sa pag-activate ng Premium (/api/premium/approve)
 
 # ==================== DATABASE HELPERS ====================
 def get_db():
@@ -25,7 +24,6 @@ def init_db():
     conn = get_db()
     cur = conn.cursor()
 
-    # Users table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,7 +41,6 @@ def init_db():
         )
     """)
 
-    # Tasks table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +57,6 @@ def init_db():
         )
     """)
 
-    # Schedule table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS schedule (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,7 +70,6 @@ def init_db():
         )
     """)
 
-    # Notes table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,7 +82,6 @@ def init_db():
         )
     """)
 
-    # Projects table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,7 +94,6 @@ def init_db():
         )
     """)
 
-    # Grades table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS grades (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,7 +106,6 @@ def init_db():
         )
     """)
 
-    # Budget table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS budget (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,7 +118,6 @@ def init_db():
         )
     """)
 
-    # Study Planner table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS planner (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -138,7 +129,6 @@ def init_db():
         )
     """)
 
-    # Payment requests table
     cur.execute("""
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -172,10 +162,10 @@ def check_premium_status(user_id):
     if not row:
         conn.close()
         return False
-    
+
     is_premium = row['is_premium']
     expiry_str = row['premium_expiry']
-    
+
     if is_premium and expiry_str:
         expiry = datetime.datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
         now = get_ph_time().replace(tzinfo=None)
@@ -184,7 +174,7 @@ def check_premium_status(user_id):
             conn.commit()
             conn.close()
             return False
-    
+
     conn.close()
     return bool(is_premium)
 
@@ -207,34 +197,34 @@ def index():
 def register():
     if request.method == 'GET':
         return render_template_string(FRONTEND_HTML, page='register')
-    
+
     data = request.get_json()
     required = ['full_name', 'email', 'student_id', 'course_year', 'password']
     for field in required:
         if not data.get(field, '').strip():
             return jsonify({'success': False, 'error': 'All fields are required'})
-    
+
     if data['password'] != data.get('confirm_password', ''):
         return jsonify({'success': False, 'error': 'Passwords do not match'})
-    
+
     if len(data['password']) < 6:
         return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
-    
+
     conn = get_db()
     cur = conn.cursor()
-    
+
     try:
         user_id = str(uuid.uuid4())[:8]
         now = format_date(get_ph_time())
         cur.execute("""
             INSERT INTO users (user_id, full_name, email, student_id, course_year, password_hash, join_date)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, data['full_name'].strip(), data['email'].strip().lower(), 
-              data['student_id'].strip(), data['course_year'].strip(), 
+        """, (user_id, data['full_name'].strip(), data['email'].strip().lower(),
+              data['student_id'].strip(), data['course_year'].strip(),
               hash_password(data['password']), now))
         conn.commit()
-        session['user_id'] = user_id
-        return jsonify({'success': True, 'user_id': user_id})
+        # FIX: hindi na auto-login. Babalik muna sa Login page ang user.
+        return jsonify({'success': True})
     except sqlite3.IntegrityError:
         return jsonify({'success': False, 'error': 'Email already registered'})
     finally:
@@ -244,25 +234,24 @@ def register():
 def login():
     if request.method == 'GET':
         return render_template_string(FRONTEND_HTML, page='login')
-    
+
     data = request.get_json()
     email = data.get('email', '').strip().lower()
     password = data.get('password', '')
     remember = data.get('remember', False)
-    
+
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cur.fetchone()
     conn.close()
-    
+
     if not user or user['password_hash'] != hash_password(password):
         return jsonify({'success': False, 'error': 'Invalid email or password'})
-    
+
     session['user_id'] = user['user_id']
-    # FIX: dati ay "if not remember: session.permanent = False" lang, kaya walang epekto ang Remember Me
     session.permanent = bool(remember)
-    
+
     return jsonify({'success': True, 'user_id': user['user_id'], 'name': user['full_name']})
 
 @app.route('/logout')
@@ -284,10 +273,10 @@ def get_user():
     user = get_user_data(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    
+
     is_premium = check_premium_status(user_id)
     expiry = user.get('premium_expiry') if is_premium else None
-    
+
     return jsonify({
         'full_name': user['full_name'],
         'email': user['email'],
@@ -317,19 +306,37 @@ def set_theme():
 def request_premium():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
-    reference_id = f"TH-{session['user_id']}-{str(uuid.uuid4())[:6].upper()}"
-    now = format_date(get_ph_time())
-    
+
     conn = get_db()
     cur = conn.cursor()
+
+    # FIX: kung may pending/waiting na reference ang user, ibalik ito (hindi gumagawa ng bago tuwing bubuksan ang page)
+    cur.execute("""
+        SELECT reference_id FROM payments
+        WHERE user_id = ? AND status IN ('pending', 'waiting')
+        ORDER BY id DESC LIMIT 1
+    """, (session['user_id'],))
+    existing = cur.fetchone()
+    if existing:
+        conn.close()
+        return jsonify({
+            'success': True,
+            'reference_id': existing['reference_id'],
+            'amount': PREMIUM_PRICE,
+            'gcash_number': GCASH_NUMBER,
+            'gcash_name': GCASH_NAME
+        })
+
+    reference_id = f"TH-{session['user_id']}-{str(uuid.uuid4())[:6].upper()}"
+    now = format_date(get_ph_time())
+
     cur.execute("""
         INSERT INTO payments (user_id, amount, reference_id, status, sent_at)
         VALUES (?, ?, ?, 'pending', ?)
     """, (session['user_id'], PREMIUM_PRICE, reference_id, now))
     conn.commit()
     conn.close()
-    
+
     return jsonify({
         'success': True,
         'reference_id': reference_id,
@@ -342,37 +349,34 @@ def request_premium():
 def confirm_payment():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     data = request.get_json()
     reference_id = data.get('reference_id', '')
-    
+
     conn = get_db()
     cur = conn.cursor()
-    
-    # Check if reference exists and belongs to this user
-    cur.execute("SELECT * FROM payments WHERE reference_id = ? AND user_id = ?", 
+
+    cur.execute("SELECT * FROM payments WHERE reference_id = ? AND user_id = ?",
                 (reference_id, session['user_id']))
     payment = cur.fetchone()
-    
+
     if not payment:
         conn.close()
         return jsonify({'success': False, 'error': 'Reference ID not found'})
-    
+
     if payment['status'] == 'activated':
         conn.close()
         return jsonify({'success': True, 'message': 'Already activated'})
-    
-    # Mark as waiting for admin approval
+
     cur.execute("UPDATE payments SET status = 'waiting' WHERE reference_id = ?", (reference_id,))
     conn.commit()
     conn.close()
-    
+
     return jsonify({
         'success': True,
         'message': 'Payment submitted! Please wait for admin confirmation (usually within 24 hours).'
     })
 
-# FIX: dati ay walang route na nag-a-activate ng Premium, kaya hindi kailanman nagiging Premium ang user.
 # Tawagin ito ng admin (o ng payment webhook) kapag nakumpirma na ang bayad:
 #   POST /api/premium/approve   header: X-Admin-Key: <ADMIN_KEY>   body: {"reference_id": "TH-..."}
 @app.route('/api/premium/approve', methods=['POST'])
@@ -411,24 +415,23 @@ def approve_payment():
 def premium_status():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
+
     is_premium = check_premium_status(session['user_id'])
     user = get_user_data(session['user_id'])
-    
+
     days_left = 0
     if is_premium and user.get('premium_expiry'):
         expiry = datetime.datetime.strptime(user['premium_expiry'], "%Y-%m-%d %H:%M:%S")
         now = get_ph_time().replace(tzinfo=None)
         days_left = (expiry - now).days
-    
-    # Get latest payment
+
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM payments WHERE user_id = ? ORDER BY id DESC LIMIT 1", 
+    cur.execute("SELECT * FROM payments WHERE user_id = ? ORDER BY id DESC LIMIT 1",
                 (session['user_id'],))
     payment = cur.fetchone()
     conn.close()
-    
+
     return jsonify({
         'is_premium': is_premium,
         'days_left': days_left,
@@ -445,35 +448,35 @@ def tasks():
     user_id = session['user_id']
     conn = get_db()
     cur = conn.cursor()
-    
+
     if request.method == 'GET':
         cur.execute("SELECT * FROM tasks WHERE user_id = ? ORDER BY due_date ASC, priority DESC", (user_id,))
         tasks = cur.fetchall()
         conn.close()
         return jsonify([dict(t) for t in tasks])
-    
+
     elif request.method == 'POST':
         data = request.get_json()
         now = format_date(get_ph_time())
         cur.execute("""
             INSERT INTO tasks (user_id, title, subject, description, due_date, due_time, priority, reminder_set, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, data['title'], data.get('subject',''), data.get('description',''), 
+        """, (user_id, data['title'], data.get('subject',''), data.get('description',''),
               data['due_date'], data.get('due_time','23:59'), data.get('priority','medium'),
               1 if data.get('reminder_set') else 0, now))
         conn.commit()
         task_id = cur.lastrowid
         conn.close()
         return jsonify({'success': True, 'id': task_id})
-    
+
     elif request.method == 'PUT':
         data = request.get_json()
-        cur.execute("UPDATE tasks SET completed = ? WHERE id = ? AND user_id = ?", 
+        cur.execute("UPDATE tasks SET completed = ? WHERE id = ? AND user_id = ?",
                     (data.get('completed', 0), data['id'], user_id))
         conn.commit()
         conn.close()
         return jsonify({'success': True})
-    
+
     elif request.method == 'DELETE':
         task_id = request.args.get('id')
         cur.execute("DELETE FROM tasks WHERE id = ? AND user_id = ?", (task_id, user_id))
@@ -489,24 +492,24 @@ def schedule():
     user_id = session['user_id']
     conn = get_db()
     cur = conn.cursor()
-    
+
     if request.method == 'GET':
         cur.execute("SELECT * FROM schedule WHERE user_id = ? ORDER BY time_start", (user_id,))
         items = cur.fetchall()
         conn.close()
         return jsonify([dict(s) for s in items])
-    
+
     elif request.method == 'POST':
         data = request.get_json()
         cur.execute("""
             INSERT INTO schedule (user_id, subject, day, time_start, time_end, room, color)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, data['subject'], data['day'], data['time_start'], 
+        """, (user_id, data['subject'], data['day'], data['time_start'],
               data['time_end'], data.get('room',''), data.get('color','#6366F1')))
         conn.commit()
         conn.close()
         return jsonify({'success': True})
-    
+
     elif request.method == 'DELETE':
         item_id = request.args.get('id')
         cur.execute("DELETE FROM schedule WHERE id = ? AND user_id = ?", (item_id, user_id))
@@ -523,13 +526,13 @@ def notes():
     conn = get_db()
     cur = conn.cursor()
     now = format_date(get_ph_time())
-    
+
     if request.method == 'GET':
         cur.execute("SELECT * FROM notes WHERE user_id = ? ORDER BY updated_at DESC", (user_id,))
         items = cur.fetchall()
         conn.close()
         return jsonify([dict(n) for n in items])
-    
+
     elif request.method == 'POST':
         data = request.get_json()
         cur.execute("""
@@ -539,7 +542,7 @@ def notes():
         conn.commit()
         conn.close()
         return jsonify({'success': True})
-    
+
     elif request.method == 'DELETE':
         note_id = request.args.get('id')
         cur.execute("DELETE FROM notes WHERE id = ? AND user_id = ?", (note_id, user_id))
@@ -556,13 +559,13 @@ def projects():
     conn = get_db()
     cur = conn.cursor()
     now = format_date(get_ph_time())
-    
+
     if request.method == 'GET':
         cur.execute("SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
         items = cur.fetchall()
         conn.close()
         return jsonify([dict(p) for p in items])
-    
+
     elif request.method == 'POST':
         data = request.get_json()
         cur.execute("""
@@ -572,15 +575,15 @@ def projects():
         conn.commit()
         conn.close()
         return jsonify({'success': True})
-    
+
     elif request.method == 'PUT':
         data = request.get_json()
-        cur.execute("UPDATE projects SET status = ? WHERE id = ? AND user_id = ?", 
+        cur.execute("UPDATE projects SET status = ? WHERE id = ? AND user_id = ?",
                     (data['status'], data['id'], user_id))
         conn.commit()
         conn.close()
         return jsonify({'success': True})
-    
+
     elif request.method == 'DELETE':
         proj_id = request.args.get('id')
         cur.execute("DELETE FROM projects WHERE id = ? AND user_id = ?", (proj_id, user_id))
@@ -597,24 +600,24 @@ def grades():
     conn = get_db()
     cur = conn.cursor()
     now = format_date(get_ph_time())
-    
+
     if request.method == 'GET':
         cur.execute("SELECT * FROM grades WHERE user_id = ? ORDER BY recorded_at DESC", (user_id,))
         items = cur.fetchall()
         conn.close()
         return jsonify([dict(g) for g in items])
-    
+
     elif request.method == 'POST':
         data = request.get_json()
         cur.execute("""
             INSERT INTO grades (user_id, subject, score, units, semester, recorded_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (user_id, data['subject'], data['score'], data.get('units', 3), 
+        """, (user_id, data['subject'], data['score'], data.get('units', 3),
               data.get('semester',''), now))
         conn.commit()
         conn.close()
         return jsonify({'success': True})
-    
+
     elif request.method == 'DELETE':
         grade_id = request.args.get('id')
         cur.execute("DELETE FROM grades WHERE id = ? AND user_id = ?", (grade_id, user_id))
@@ -629,29 +632,29 @@ def budget():
         return jsonify({'error': 'Unauthorized'}), 401
     if not check_premium_status(session['user_id']):
         return jsonify({'error': 'Premium required', 'premium_required': True}), 403
-    
+
     user_id = session['user_id']
     conn = get_db()
     cur = conn.cursor()
     now = format_date(get_ph_time())
-    
+
     if request.method == 'GET':
         cur.execute("SELECT * FROM budget WHERE user_id = ? ORDER BY recorded_at DESC", (user_id,))
         items = cur.fetchall()
         conn.close()
         return jsonify([dict(b) for b in items])
-    
+
     elif request.method == 'POST':
         data = request.get_json()
         cur.execute("""
             INSERT INTO budget (user_id, type, category, amount, description, recorded_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (user_id, data['type'], data['category'], data['amount'], 
+        """, (user_id, data['type'], data['category'], data['amount'],
               data.get('description',''), now))
         conn.commit()
         conn.close()
         return jsonify({'success': True})
-    
+
     elif request.method == 'DELETE':
         item_id = request.args.get('id')
         cur.execute("DELETE FROM budget WHERE id = ? AND user_id = ?", (item_id, user_id))
@@ -660,7 +663,6 @@ def budget():
         return jsonify({'success': True})
 
 # ==================== PLANNER API ====================
-# FIX: dati ay walang /api/planner route kahit tinatawag ito ng frontend (loadGoals, saveGoal, atbp.)
 @app.route('/api/planner', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def planner():
     if 'user_id' not in session:
@@ -747,6 +749,8 @@ body {background: var(--bg); color: var(--text); min-height: 100vh; transition: 
 .link a {color: var(--primary); text-decoration: none; font-weight: 500;}
 .error-text {color: var(--danger); font-size: 13px; margin-top: 6px; display: none;}
 .error-text.show {display: block;}
+.success-text {color: var(--success); font-size: 13px; margin: 0 0 12px; display: none; font-weight: 500;}
+.success-text.show {display: block;}
 
 /* Main Layout */
 .header {background: var(--card); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100;}
@@ -820,7 +824,8 @@ body {background: var(--bg); color: var(--text); min-height: 100vh; transition: 
 .modal h2 {font-size: 20px; margin-bottom: 16px; text-align: center;}
 .modal-actions {display: flex; gap: 10px; margin-top: 20px;}
 .modal-actions button {flex: 1;}
-.qr-code {width: 180px; height: 180px; background: #F3F4F6; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 16px auto; font-size: 60px;}
+.qr-code {width: 190px; height: 190px; background: #FFFFFF; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 16px auto; font-size: 60px; overflow: hidden; border: 1px solid var(--border);}
+.qr-code img, .qr-code canvas {max-width: 100%; max-height: 100%;}
 .premium-features {margin: 16px 0;}
 .premium-features p {padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--border);}
 .countdown-box {background: linear-gradient(135deg, #F59E0B, #D97706); color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: 600; margin: 12px 0;}
@@ -830,11 +835,10 @@ input[type="checkbox"] {width: auto; margin-right: 8px;}
 .empty-state span {font-size: 48px; display: block; margin-bottom: 12px; opacity: 0.5;}
 '''
 
-# Continue the rest of the HTML template
-# FIX: ginawang raw string (r''') para hindi sirain ng Python ang mga \' sa loob ng JavaScript
-# (hal. 'You\'re all caught up!' ay naging 'You're all caught up!' kaya nag-syntax error ang buong script)
+# Ginawang raw string (r''') para hindi sirain ng Python ang mga \' sa loob ng JavaScript
 FRONTEND_HTML += r'''
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="app-container" id="app">
@@ -858,6 +862,7 @@ FRONTEND_HTML += r'''
                     <label style="display: flex; align-items: center; margin-bottom: 16px; font-size: 14px;">
                         <input type="checkbox" id="rememberMe"> Remember me
                     </label>
+                    <div class="success-text" id="loginSuccess"></div>
                     <div class="error-text" id="loginError"></div>
                     <button type="submit" class="btn btn-primary">Log In</button>
                 </form>
@@ -953,7 +958,6 @@ FRONTEND_HTML += r'''
                 <h2 class="greeting" id="greeting">Good Morning!</h2>
                 <p class="quote" id="dailyQuote">"Your future is created by what you do today, not tomorrow."</p>
 
-                <!-- Today's Schedule -->
                 <div class="card">
                     <h3>📅 Today's Schedule</h3>
                     <div id="todayScheduleList">
@@ -961,7 +965,6 @@ FRONTEND_HTML += r'''
                     </div>
                 </div>
 
-                <!-- Upcoming Deadlines -->
                 <div class="card">
                     <h3>⏰ Upcoming Deadlines</h3>
                     <div id="upcomingTasksList">
@@ -969,7 +972,6 @@ FRONTEND_HTML += r'''
                     </div>
                 </div>
 
-                <!-- Quick Stats -->
                 <div class="card">
                     <h3>📊 Quick Stats</h3>
                     <div class="stats-grid">
@@ -1000,7 +1002,6 @@ FRONTEND_HTML += r'''
                     </div>
                 </div>
 
-                <!-- Quick Actions -->
                 <div class="card">
                     <h3>⚡ Quick Actions</h3>
                     <div class="quick-grid">
@@ -1051,7 +1052,8 @@ FRONTEND_HTML += r'''
                 </div>
                 <div id="projectsList"></div>
             </div>
-<!-- GRADES -->
+
+            <!-- GRADES -->
             <div id="pageGrades" class="page">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <h2 style="font-size: 20px;">📊 Grades & GPA</h2>
@@ -1114,7 +1116,7 @@ FRONTEND_HTML += r'''
                         <p style="color: var(--muted);">You are currently on the <strong>Free Plan</strong></p>
                         <div class="countdown-box">
                             <div style="font-size: 24px; font-weight: 700;">₱50.00</div>
-                            <div style="font-size: 13px; opacity: 0.9;">per month — Auto-renewing every 30 days</div>
+                            <div style="font-size: 13px; opacity: 0.9;">per month (30 days)</div>
                         </div>
                     </div>
                     <div id="premiumActive" style="display: none; text-align: center; padding: 10px 0;">
@@ -1127,26 +1129,30 @@ FRONTEND_HTML += r'''
                     </div>
                 </div>
 
-                <div class="card">
+                <div class="card" id="payCard">
                     <h3>💳 Pay via GCash</h3>
-                    <div class="qr-code">📱</div>
+                    <div class="qr-code">
+                        <img id="gcashQrImg" src="/static/gcash_qr.png" alt="GCash QR"
+                             onerror="this.style.display='none'; document.getElementById('gcashQrFallback').style.display='block';">
+                        <div id="gcashQrFallback" style="display:none;"></div>
+                    </div>
                     <p style="text-align: center; font-size: 14px; margin-bottom: 12px;">
-                        <strong>GCash Number:</strong> 0917-123-4567<br>
-                        <strong>Name:</strong> Juan Dela Cruz<br>
-                        <strong>Amount:</strong> ₱50.00
+                        <strong>GCash Number:</strong> <span id="gcNumber">0930-132-9437</span><br>
+                        <strong>Name:</strong> <span id="gcName">--</span><br>
+                        <strong>Amount:</strong> ₱50.00 (auto-set)
                     </p>
                     <ol style="font-size: 14px; line-height: 1.8; color: var(--muted); padding-left: 20px;">
-                        <li>Send exactly <strong>₱50.00</strong> to the GCash number above</li>
-                        <li>Copy your <strong>Reference Number</strong> from GCash</li>
-                        <li>Paste it below and click "I Have Sent Payment"</li>
+                        <li>I-scan ang QR o i-send sa GCash number sa itaas</li>
+                        <li>Mag-send ng eksaktong <strong>₱50.00</strong></li>
+                        <li>Ilagay ang Reference ID sa message/note ng GCash</li>
+                        <li>I-click ang "I Have Sent Payment"</li>
                     </ol>
                     <div class="form-group" style="margin-top: 16px;">
-                        <label>Reference ID</label>
+                        <label>Your Reference ID</label>
                         <input type="text" id="refIdDisplay" readonly style="background: var(--border);">
-                        <small style="color: var(--muted); font-size: 12px;">Use this Reference ID when sending payment</small>
+                        <small style="color: var(--muted); font-size: 12px;">Awtomatikong ginawa. Ilagay ito sa GCash note.</small>
                     </div>
-                    <button class="btn btn-primary" onclick="generateReference()">🔄 Generate Reference ID</button>
-                    <button class="btn btn-success" style="margin-top: 10px;" onclick="submitPaymentConfirmation()">✅ I Have Sent Payment</button>
+                    <button class="btn btn-success" onclick="submitPaymentConfirmation()">✅ I Have Sent Payment</button>
                     <p id="paymentStatusText" style="text-align: center; margin-top: 12px; font-size: 14px;"></p>
                 </div>
 
@@ -1168,7 +1174,7 @@ FRONTEND_HTML += r'''
             <!-- SETTINGS -->
             <div id="pageSettings" class="page">
                 <h2 style="font-size: 20px; margin-bottom: 16px;">⚙️ Settings</h2>
-                
+
                 <div class="card">
                     <h3>🎨 Theme</h3>
                     <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
@@ -1223,7 +1229,6 @@ FRONTEND_HTML += r'''
     </div>
 
     <!-- MODALS -->
-    <!-- Add Task Modal -->
     <div class="modal-overlay" id="addTaskModal">
         <div class="modal">
             <h2>➕ Add New Task</h2>
@@ -1265,7 +1270,6 @@ FRONTEND_HTML += r'''
         </div>
     </div>
 
-    <!-- Add Schedule Modal -->
     <div class="modal-overlay" id="addScheduleModal">
         <div class="modal">
             <h2>📅 Add Class Schedule</h2>
@@ -1303,7 +1307,6 @@ FRONTEND_HTML += r'''
         </div>
     </div>
 
-    <!-- Add Note Modal -->
     <div class="modal-overlay" id="addNoteModal">
         <div class="modal">
             <h2>📝 Create Note</h2>
@@ -1331,7 +1334,6 @@ FRONTEND_HTML += r'''
         </div>
     </div>
 
-    <!-- Add Project Modal -->
     <div class="modal-overlay" id="addProjectModal">
         <div class="modal">
             <h2>👥 New Group Project</h2>
@@ -1354,7 +1356,6 @@ FRONTEND_HTML += r'''
         </div>
     </div>
 
-    <!-- Add Grade Modal -->
     <div class="modal-overlay" id="addGradeModal">
         <div class="modal">
             <h2>📊 Record Grade</h2>
@@ -1381,7 +1382,6 @@ FRONTEND_HTML += r'''
         </div>
     </div>
 
-    <!-- Add Budget Modal -->
     <div class="modal-overlay" id="addBudgetModal">
         <div class="modal">
             <h2>💰 Add Transaction</h2>
@@ -1411,7 +1411,6 @@ FRONTEND_HTML += r'''
         </div>
     </div>
 
-    <!-- Add Goal Modal -->
     <div class="modal-overlay" id="addGoalModal">
         <div class="modal">
             <h2>🎯 New Study Goal</h2>
@@ -1430,7 +1429,6 @@ FRONTEND_HTML += r'''
         </div>
     </div>
 
-    <!-- Premium Lock Modal -->
     <div class="modal-overlay" id="premiumLockModal">
         <div class="modal" style="text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">🔒</div>
@@ -1443,7 +1441,6 @@ FRONTEND_HTML += r'''
         </div>
     </div>
 
-    <!-- Quick Add Modal -->
     <div class="modal-overlay" id="quickAddModal">
         <div class="modal">
             <h2>⚡ Quick Add</h2>
@@ -1513,19 +1510,18 @@ function showAuthPage(page) {
 
 function showPage(pageName) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    // FIX: dati ay walang backtick: document.getElementById(page${...}) -> syntax error
     document.getElementById(`page${pageName.charAt(0).toUpperCase() + pageName.slice(1)}`).classList.add('active');
-    
+
     const titles = {
         dashboard: 'Dashboard', tasks: 'My Tasks', schedule: 'Schedule', notes: 'Notes',
         projects: 'Projects', grades: 'Grades', budget: 'Budget Tracker',
         planner: 'Study Planner', premium: '✨ Premium', settings: 'Settings'
     };
     document.getElementById('pageTitle').textContent = titles[pageName] || 'TaskHive';
-    
+
     document.getElementById('sidebar').classList.remove('show');
     document.getElementById('sidebarOverlay').classList.remove('show');
-    
+
     updateBottomNav(pageName);
 }
 
@@ -1535,7 +1531,11 @@ function navigateTo(pageName) {
         return;
     }
     showPage(pageName);
-    if (pageName === 'premium') loadPremiumStatus();
+    if (pageName === 'premium') {
+        loadPremiumStatus();
+        // Auto-generate ang Reference ID (₱50 auto-set) kapag hindi pa Premium
+        if (!isPremium && !referenceId) generateReference();
+    }
 }
 
 function showMainApp() {
@@ -1554,8 +1554,8 @@ function updateUserUI() {
     document.getElementById('settingsSID').textContent = currentUser.student_id;
     document.getElementById('settingsCourse').textContent = currentUser.course_year;
     document.getElementById('settingsJoin').textContent = new Date(currentUser.join_date).toLocaleDateString('en-PH');
-    setGreeting(); // FIX: para lumabas ang pangalan sa greeting pagka-login
-    
+    setGreeting();
+
     updatePremiumUI();
 }
 
@@ -1565,10 +1565,9 @@ function updatePremiumUI() {
     const budgetMenu = document.getElementById('menuBudget');
     const planText = document.getElementById('currentPlan');
     const subStatus = document.getElementById('subStatus');
-    
+
     if (isPremium) {
         premiumBadge.style.display = 'block';
-        // FIX: kulang ng backtick
         expiryText.textContent = `Valid until: ${currentUser.premium_expiry ? new Date(currentUser.premium_expiry).toLocaleDateString('en-PH') : '--'}`;
         budgetMenu.classList.remove('locked');
         budgetMenu.querySelector('.lock').style.display = 'none';
@@ -1598,9 +1597,7 @@ function updateBottomNav(page) {
     });
 }
 
-// FIX: helper para ma-reset nang tama ang mga form pagkatapos mag-save.
-// Dati: querySelectorAll('input, textarea, select').forEach(el => el.value = '') -> nagiging blangko ang
-// Priority/Day/Folder/Type at ang Due Time/Units, kaya nase-save ang maling data sa susunod.
+// Helper para ma-reset nang tama ang mga form pagkatapos mag-save
 function resetModal(id) {
     document.getElementById(id).querySelectorAll('input, textarea, select').forEach(el => {
         if (el.type === 'checkbox') el.checked = false;
@@ -1615,7 +1612,7 @@ function resetModal(id) {
 function toggleTheme() {
     const isDark = document.getElementById('darkModeToggle').checked;
     applyTheme(isDark ? 'dark' : 'light');
-    
+
     fetch('/api/user/theme', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1639,7 +1636,6 @@ function setGreeting() {
     let greeting = 'Good Evening';
     if (hour >= 5 && hour < 12) greeting = 'Good Morning';
     else if (hour >= 12 && hour < 18) greeting = 'Good Afternoon';
-    // FIX: kulang ng backtick
     document.getElementById('greeting').textContent = `${greeting}${currentUser ? ', ' + currentUser.full_name.split(' ')[0] : ''}!`;
 }
 
@@ -1663,9 +1659,9 @@ function showAddScheduleModal() { showModal('addScheduleModal'); }
 function showAddNoteModal() { showModal('addNoteModal'); }
 function showAddProjectModal() { showModal('addProjectModal'); }
 function showAddGradeModal() { showModal('addGradeModal'); }
-function showAddBudgetModal() { 
+function showAddBudgetModal() {
     if (!isPremium) { showModal('premiumLockModal'); return; }
-    showModal('addBudgetModal'); 
+    showModal('addBudgetModal');
 }
 function showAddGoalModal() { showModal('addGoalModal'); }
 function showQuickAddModal() { showModal('quickAddModal'); }
@@ -1677,7 +1673,7 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     const remember = document.getElementById('rememberMe').checked;
-    
+
     fetch('/login', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1686,8 +1682,11 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
+            document.getElementById('loginSuccess').classList.remove('show');
+            document.getElementById('loginError').classList.remove('show');
             checkSession();
         } else {
+            document.getElementById('loginSuccess').classList.remove('show');
             document.getElementById('loginError').textContent = data.error;
             document.getElementById('loginError').classList.add('show');
         }
@@ -1702,7 +1701,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
     const course_year = document.getElementById('regCourse').value;
     const password = document.getElementById('regPassword').value;
     const confirm_password = document.getElementById('regConfirmPass').value;
-    
+
     fetch('/register', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1711,7 +1710,16 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            checkSession();
+            // Pagkatapos mag-register, bumalik muna sa Login page
+            document.getElementById('registerForm').reset();
+            document.getElementById('regError').classList.remove('show');
+            showAuthPage('login');
+            document.getElementById('loginEmail').value = email.trim().toLowerCase();
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginError').classList.remove('show');
+            const ok = document.getElementById('loginSuccess');
+            ok.textContent = '✅ Account created! Please log in.';
+            ok.classList.add('show');
         } else {
             document.getElementById('regError').textContent = data.error;
             document.getElementById('regError').classList.add('show');
@@ -1751,9 +1759,8 @@ function loadTasks() {
 function saveTask() {
     const title = document.getElementById('taskTitle').value.trim();
     if (!title) { alert('Please enter a title!'); return; }
-    // FIX: due date ay required pero hindi chine-check
     if (!document.getElementById('taskDueDate').value) { alert('Please pick a due date!'); return; }
-    
+
     const data = {
         title: title,
         subject: document.getElementById('taskSubject').value,
@@ -1763,7 +1770,7 @@ function saveTask() {
         priority: document.getElementById('taskPriority').value,
         reminder_set: document.getElementById('taskReminder').checked
     };
-    
+
     fetch('/api/tasks', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1772,7 +1779,7 @@ function saveTask() {
     .then(res => res.json())
     .then(() => {
         closeModal('addTaskModal');
-        resetModal('addTaskModal'); // FIX
+        resetModal('addTaskModal');
         loadTasks();
     });
 }
@@ -1789,7 +1796,7 @@ function toggleTaskComplete(id, currentStatus) {
 
 function deleteTask(id) {
     if (!confirm('Delete this task?')) return;
-    fetch(`/api/tasks?id=${id}`, {method: 'DELETE'}) // FIX: backtick
+    fetch(`/api/tasks?id=${id}`, {method: 'DELETE'})
         .then(res => res.json())
         .then(() => loadTasks());
 }
@@ -1804,26 +1811,23 @@ function getDaysRemaining(dueDateStr) {
 
 function renderDashboardTasks() {
     const today = new Date().toISOString().split('T')[0];
-    const todayList = document.getElementById('todayScheduleList');
     const upcomingList = document.getElementById('upcomingTasksList');
-    
-    const todayTasks = tasks.filter(t => t.due_date === today && !t.completed);
+
     const upcomingTasks = tasks.filter(t => t.due_date >= today && !t.completed).sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).slice(0, 5);
-    
-    // Today's schedule section uses schedule data, not tasks
+
     renderTodaySchedule();
-    
+
     if (upcomingTasks.length === 0) {
         upcomingList.innerHTML = '<div class="empty-state"><span>🎉</span>No upcoming deadlines. You\'re all caught up!</div>';
     } else {
         upcomingList.innerHTML = upcomingTasks.map(t => {
             const daysLeft = getDaysRemaining(t.due_date);
             let dueClass = 'due-later';
-            let dueText = `${daysLeft} days left`; // FIX: backtick
+            let dueText = `${daysLeft} days left`;
             if (daysLeft === 0) { dueClass = 'due-today'; dueText = 'Today!'; }
-            else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = `${Math.abs(daysLeft)} days overdue`; } // FIX: backtick
+            else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = `${Math.abs(daysLeft)} days overdue`; }
             else if (daysLeft <= 2) { dueClass = 'due-today'; }
-            
+
             return `
                 <div class="task-item">
                     <div class="task-priority priority-${t.priority}"></div>
@@ -1845,14 +1849,14 @@ function renderAllTasks() {
         container.innerHTML = '<div class="empty-state"><span>📋</span>No tasks yet. Click "+ Add Task" to get started!</div>';
         return;
     }
-    
+
     container.innerHTML = tasks.sort((a, b) => new Date(a.due_date) - new Date(b.due_date)).map(t => {
         const daysLeft = getDaysRemaining(t.due_date);
         let dueClass = 'due-later';
-        let dueText = `${daysLeft}d`; // FIX: backtick
+        let dueText = `${daysLeft}d`;
         if (daysLeft === 0) { dueClass = 'due-today'; dueText = 'Today'; }
-        else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = `${Math.abs(daysLeft)}d overdue`; } // FIX: backtick
-        
+        else if (daysLeft < 0) { dueClass = 'due-overdue'; dueText = `${Math.abs(daysLeft)}d overdue`; }
+
         return `
             <div class="card" style="margin-bottom: 10px;">
                 <div class="task-item" style="border-bottom: none; padding: 0;">
@@ -1881,15 +1885,14 @@ function updateStats() {
     const today = new Date().toISOString().split('T')[0];
     const overdue = tasks.filter(t => !t.completed && t.due_date < today).length;
     const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-    
-    document.getElementById('statPercent').textContent = `${percent}%`; // FIX: backtick
+
+    document.getElementById('statPercent').textContent = `${percent}%`;
     document.getElementById('statDone').textContent = done;
     document.getElementById('statPending').textContent = pending;
     document.getElementById('statOverdue').textContent = overdue;
-    
-    // Update progress circle
-    document.querySelector('.stat-circle').style.background = 
-        `conic-gradient(var(--primary) ${percent}%, var(--border) ${percent}% 100%)`; // FIX: backtick
+
+    document.querySelector('.stat-circle').style.background =
+        `conic-gradient(var(--primary) ${percent}%, var(--border) ${percent}% 100%)`;
 }
 
 // --- SCHEDULE ---
@@ -1904,7 +1907,6 @@ function loadSchedule() {
 }
 
 function saveSchedule() {
-    // FIX: walang validation; nase-save kahit blangko
     if (!document.getElementById('schSubject').value.trim()) { alert('Please enter a subject!'); return; }
     if (!document.getElementById('schStart').value || !document.getElementById('schEnd').value) { alert('Please set start and end time!'); return; }
     if (document.getElementById('schEnd').value <= document.getElementById('schStart').value) { alert('End time must be after start time!'); return; }
@@ -1916,7 +1918,7 @@ function saveSchedule() {
         time_end: document.getElementById('schEnd').value,
         room: document.getElementById('schRoom').value
     };
-    
+
     fetch('/api/schedule', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1925,14 +1927,14 @@ function saveSchedule() {
     .then(res => res.json())
     .then(() => {
         closeModal('addScheduleModal');
-        resetModal('addScheduleModal'); // FIX
+        resetModal('addScheduleModal');
         loadSchedule();
     });
 }
 
 function deleteSchedule(id) {
     if (!confirm('Delete this schedule?')) return;
-    fetch(`/api/schedule?id=${id}`, {method: 'DELETE'}) // FIX: backtick
+    fetch(`/api/schedule?id=${id}`, {method: 'DELETE'})
         .then(res => res.json())
         .then(() => loadSchedule());
 }
@@ -1946,7 +1948,7 @@ function renderTodaySchedule() {
     const today = getTodayName();
     const todaySched = schedule.filter(s => s.day === today).sort((a, b) => a.time_start.localeCompare(b.time_start));
     const container = document.getElementById('todayScheduleList');
-    
+
     if (todaySched.length === 0) {
         container.innerHTML = '<div class="empty-state"><span>📭</span>No classes today. Enjoy your time!</div>';
     } else {
@@ -1968,22 +1970,22 @@ function formatTime(t) {
     const hour = parseInt(h);
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const h12 = hour % 12 || 12;
-    return `${h12}:${m} ${ampm}`; // FIX: backtick
+    return `${h12}:${m} ${ampm}`;
 }
 
 function renderFullSchedule() {
     const container = document.getElementById('scheduleList');
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
+
     if (schedule.length === 0) {
         container.innerHTML = '<div class="empty-state"><span>📅</span>No schedule yet. Add your first class!</div>';
         return;
     }
-    
+
     container.innerHTML = days.map(day => {
         const daySched = schedule.filter(s => s.day === day).sort((a, b) => a.time_start.localeCompare(b.time_start));
         if (daySched.length === 0) return '';
-        
+
         return `
             <div class="card">
                 <h4 style="margin-bottom: 10px; color: var(--primary);">${day}</h4>
@@ -2015,13 +2017,13 @@ function loadNotes() {
 function saveNote() {
     const title = document.getElementById('noteTitle').value.trim();
     if (!title) { alert('Please enter a title!'); return; }
-    
+
     const data = {
         title: title,
         content: document.getElementById('noteContent').value,
         folder_name: document.getElementById('noteFolder').value
     };
-    
+
     fetch('/api/notes', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -2030,14 +2032,14 @@ function saveNote() {
     .then(res => res.json())
     .then(() => {
         closeModal('addNoteModal');
-        resetModal('addNoteModal'); // FIX
+        resetModal('addNoteModal');
         loadNotes();
     });
 }
 
 function deleteNote(id) {
     if (!confirm('Delete this note?')) return;
-    fetch(`/api/notes?id=${id}`, {method: 'DELETE'}) // FIX: backtick
+    fetch(`/api/notes?id=${id}`, {method: 'DELETE'})
         .then(res => res.json())
         .then(() => loadNotes());
 }
@@ -2045,16 +2047,16 @@ function deleteNote(id) {
 function renderNotes() {
     const container = document.getElementById('notesList');
     const folders = {'General': '📁 General', 'Reviewer': '📋 Reviewer', 'Lecture': '📖 Lecture', 'Personal': '✏️ Personal'};
-    
+
     if (notes.length === 0) {
         container.innerHTML = '<div class="empty-state"><span>📝</span>No notes yet. Start writing!</div>';
         return;
     }
-    
+
     container.innerHTML = Object.entries(folders).map(([key, label]) => {
         const folderNotes = notes.filter(n => n.folder_name === key);
         if (folderNotes.length === 0) return '';
-        
+
         return `
             <div class="card">
                 <h4 style="margin-bottom: 12px;">${label}</h4>
@@ -2088,13 +2090,13 @@ function loadProjects() {
 function saveProject() {
     const name = document.getElementById('projName').value.trim();
     if (!name) { alert('Please enter a project name!'); return; }
-    
+
     const data = {
         name: name,
         members: document.getElementById('projMembers').value,
         deadline: document.getElementById('projDeadline').value
     };
-    
+
     fetch('/api/projects', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -2103,7 +2105,7 @@ function saveProject() {
     .then(res => res.json())
     .then(() => {
         closeModal('addProjectModal');
-        resetModal('addProjectModal'); // FIX
+        resetModal('addProjectModal');
         loadProjects();
     });
 }
@@ -2120,19 +2122,19 @@ function updateProjectStatus(id, status) {
 
 function deleteProject(id) {
     if (!confirm('Delete this project?')) return;
-    fetch(`/api/projects?id=${id}`, {method: 'DELETE'}) // FIX: backtick
+    fetch(`/api/projects?id=${id}`, {method: 'DELETE'})
         .then(res => res.json())
         .then(() => loadProjects());
 }
 
 function renderProjects() {
     const container = document.getElementById('projectsList');
-    
+
     if (projects.length === 0) {
         container.innerHTML = '<div class="empty-state"><span>👥</span>No projects yet. Create one for your group!</div>';
         return;
     }
-    
+
     container.innerHTML = projects.map(p => `
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
@@ -2142,7 +2144,7 @@ function renderProjects() {
             ${p.members ? `<p style="font-size: 13px; color: var(--muted);"><strong>Members:</strong> ${p.members}</p>` : ''}
             ${p.deadline ? `<p style="font-size: 13px; color: var(--muted);"><strong>Deadline:</strong> ${new Date(p.deadline).toLocaleDateString('en-PH')}</p>` : ''}
             <div style="display: flex; gap: 8px; margin-top: 12px;">
-                ${p.status !== 'Completed' 
+                ${p.status !== 'Completed'
                     ? `<button class="btn btn-success btn-sm" onclick="updateProjectStatus(${p.id}, 'Completed')">✓ Mark Done</button>`
                     : ''}
                 <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})">🗑️ Delete</button>
@@ -2166,17 +2168,17 @@ function saveGrade() {
     const subject = document.getElementById('gradeSubject').value.trim();
     const score = parseFloat(document.getElementById('gradeScore').value);
     const units = parseFloat(document.getElementById('gradeUnits').value) || 3;
-    
+
     if (!subject || isNaN(score)) { alert('Please enter subject and score!'); return; }
     if (score < 0 || score > 100) { alert('Score must be between 0 and 100!'); return; }
-    
+
     const data = {
         subject: subject,
         score: score,
         units: units,
         semester: document.getElementById('gradeSem').value
     };
-    
+
     fetch('/api/grades', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -2185,14 +2187,14 @@ function saveGrade() {
     .then(res => res.json())
     .then(() => {
         closeModal('addGradeModal');
-        resetModal('addGradeModal'); // FIX
+        resetModal('addGradeModal');
         loadGrades();
     });
 }
 
 function deleteGrade(id) {
     if (!confirm('Delete this grade entry?')) return;
-    fetch(`/api/grades?id=${id}`, {method: 'DELETE'}) // FIX: backtick
+    fetch(`/api/grades?id=${id}`, {method: 'DELETE'})
         .then(res => res.json())
         .then(() => loadGrades());
 }
@@ -2215,7 +2217,7 @@ function calculateGPA() {
         document.getElementById('gpaDisplay').textContent = '--';
         return;
     }
-    
+
     let totalWeight = 0;
     let totalUnits = 0;
     grades.forEach(g => {
@@ -2223,23 +2225,23 @@ function calculateGPA() {
         totalWeight += gpa * g.units;
         totalUnits += g.units;
     });
-    
+
     const gpa = totalWeight / totalUnits;
     document.getElementById('gpaDisplay').textContent = gpa.toFixed(2);
 }
 
 function renderGrades() {
     const container = document.getElementById('gradesList');
-    
+
     if (grades.length === 0) {
         container.innerHTML = '<div class="empty-state"><span>📊</span>No grades recorded yet.</div>';
         return;
     }
-    
+
     container.innerHTML = grades.map(g => {
         const gpa = toGPAScale(g.score);
         const color = gpa <= 1.5 ? 'var(--success)' : gpa <= 2.5 ? 'var(--warning)' : 'var(--danger)';
-        
+
         return `
             <div class="card" style="margin-bottom: 10px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -2279,11 +2281,11 @@ function saveBudget() {
     const type = document.getElementById('budgType').value;
     const category = document.getElementById('budgCat').value.trim() || 'General';
     const amount = parseFloat(document.getElementById('budgAmt').value);
-    
+
     if (isNaN(amount) || amount <= 0) { alert('Please enter a valid amount!'); return; }
-    
+
     const data = { type, category, amount, description: document.getElementById('budgDesc').value };
-    
+
     fetch('/api/budget', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -2292,14 +2294,14 @@ function saveBudget() {
     .then(res => res.json())
     .then(() => {
         closeModal('addBudgetModal');
-        resetModal('addBudgetModal'); // FIX
+        resetModal('addBudgetModal');
         loadBudget();
     });
 }
 
 function deleteBudget(id) {
     if (!confirm('Delete this transaction?')) return;
-    fetch(`/api/budget?id=${id}`, {method: 'DELETE'}) // FIX: backtick
+    fetch(`/api/budget?id=${id}`, {method: 'DELETE'})
         .then(res => res.json())
         .then(() => loadBudget());
 }
@@ -2311,18 +2313,17 @@ function renderBudget() {
         else totalExpense += b.amount;
     });
     const balance = totalIncome - totalExpense;
-    
-    // FIX: kulang ng backtick sa tatlong linyang ito
+
     document.getElementById('budgetBalance').textContent = `₱${balance.toFixed(2)}`;
     document.getElementById('totalIncome').textContent = `+₱${totalIncome.toFixed(2)}`;
     document.getElementById('totalExpense').textContent = `-₱${totalExpense.toFixed(2)}`;
-    
+
     const container = document.getElementById('budgetList');
     if (budget.length === 0) {
         container.innerHTML = '<div class="empty-state"><span>💰</span>No transactions yet.</div>';
         return;
     }
-    
+
     container.innerHTML = budget.map(b => `
         <div class="card" style="margin-bottom: 8px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -2351,12 +2352,12 @@ function loadGoals() {
 function saveGoal() {
     const goal = document.getElementById('goalText').value.trim();
     if (!goal) { alert('Please write your goal!'); return; }
-    
+
     const data = {
         goal: goal,
         target_date: document.getElementById('goalDate').value
     };
-    
+
     fetch('/api/planner', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -2383,19 +2384,19 @@ function updateGoalProgress(id, progress) {
 
 function deleteGoal(id) {
     if (!confirm('Delete this goal?')) return;
-    fetch(`/api/planner?id=${id}`, {method: 'DELETE'}) // FIX: backtick
+    fetch(`/api/planner?id=${id}`, {method: 'DELETE'})
         .then(res => res.json())
         .then(() => loadGoals());
 }
 
 function renderGoals() {
     const container = document.getElementById('goalsList');
-    
+
     if (goals.length === 0) {
         container.innerHTML = '<div class="empty-state"><span>🎯</span>No study goals yet. Set one to stay motivated!</div>';
         return;
     }
-    
+
     container.innerHTML = goals.map(g => `
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
@@ -2425,14 +2426,13 @@ function loadPremiumStatus() {
         .then(data => {
             const wasPremium = isPremium;
             isPremium = data.is_premium;
-            if (currentUser) currentUser.premium_expiry = data.expiry_date; // FIX: para tama ang "Valid until" sa sidebar
+            if (currentUser) currentUser.premium_expiry = data.expiry_date;
             updatePremiumUI();
-            if (isPremium && !wasPremium) loadBudget(); // FIX: i-load ang Budget pagka-activate
-            
+            if (isPremium && !wasPremium) loadBudget();
+
             if (isPremium) {
                 document.getElementById('premiumInactive').style.display = 'none';
                 document.getElementById('premiumActive').style.display = 'block';
-                // FIX: kulang ng backtick
                 document.getElementById('premiumExpiryText').textContent = `Valid until: ${data.expiry_date ? new Date(data.expiry_date).toLocaleDateString('en-PH') : '--'}`;
                 document.getElementById('premiumCountdown').innerHTML = `Your Premium expires in: <strong>${data.days_left} days</strong>`;
             } else {
@@ -2442,27 +2442,36 @@ function loadPremiumStatus() {
         });
 }
 
+// Awtomatikong ginagawa ang Reference ID at ipinapakita ang GCash number, pangalan, at QR (₱50 auto-set)
 function generateReference() {
     fetch('/api/premium/request', {method: 'POST'})
         .then(res => res.json())
         .then(data => {
-            if (data.success) {
-                referenceId = data.reference_id;
-                document.getElementById('refIdDisplay').value = referenceId;
-                // FIX: kulang ng backtick
-                document.getElementById('paymentStatusText').textContent = `✅ Reference ID generated! Send ₱${data.amount} via GCash.`;
-                document.getElementById('paymentStatusText').style.color = 'var(--success)';
+            if (!data.success) return;
+            referenceId = data.reference_id;
+            document.getElementById('refIdDisplay').value = referenceId;
+            document.getElementById('gcNumber').textContent = data.gcash_number;
+            document.getElementById('gcName').textContent = data.gcash_name;
+
+            // Fallback QR (laman: GCash number) kapag walang /static/gcash_qr.png
+            const fb = document.getElementById('gcashQrFallback');
+            if (fb && !fb.hasChildNodes() && window.QRCode) {
+                new QRCode(fb, {text: data.gcash_number.replace(/-/g, ''), width: 160, height: 160});
             }
+
+            const st = document.getElementById('paymentStatusText');
+            st.textContent = `Send ₱${data.amount} via GCash. Ref: ${data.reference_id}`;
+            st.style.color = 'var(--success)';
         });
 }
 
 function submitPaymentConfirmation() {
     const refVal = document.getElementById('refIdDisplay').value.trim();
     if (!refVal) {
-        alert('Please generate a Reference ID first!');
+        alert('Please wait for your Reference ID to load, then try again.');
         return;
     }
-    
+
     fetch('/api/premium/confirm-payment', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -2479,21 +2488,13 @@ function submitPaymentConfirmation() {
         }
     });
 }
-
-// Auto-refresh premium status when opening premium page
-document.addEventListener('click', function(e) {
-    if (e.target.closest('[onclick*="navigateTo(\'premium\')"]')) {
-        setTimeout(loadPremiumStatus, 100);
-    }
-});
-
 </script>
 </body>
 </html>
 '''
 
 # ==================== RUN APP ====================
-init_db()  # FIX: dati ay sa __main__ lang kaya walang table kapag hindi "python app.py" ang pinatakbo
+init_db()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
