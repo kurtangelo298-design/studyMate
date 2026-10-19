@@ -16,6 +16,8 @@ PREMIUM_DAYS = 30
 GCASH_NUMBER = "0970-456-XXXX"   # ⚠️ PALITAN ANG "XXXX" ng HULING 4 DIGITS (nasa QR: +63 970 456 ••••)
 GCASH_NAME = "JE***N V."          # Pangalan na naka-register sa QR (JE***N V.)
 ADMIN_KEY = os.environ.get("ADMIN_KEY", "")  # Para sa manual management (/api/premium/approve)
+ADMIN_USER = os.environ.get("ADMIN_USER", "admin")   # ⚠️ PALITAN sa production (env var ADMIN_USER)
+ADMIN_PASS = os.environ.get("ADMIN_PASS", "taskhive123")  # ⚠️ PALITAN sa production (env var ADMIN_PASS)
 
 # ==================== DATABASE HELPERS ====================
 def get_db():
@@ -134,6 +136,12 @@ def init_db():
             activated_at TEXT
         )
     """)
+    # Migration: dagdag columns para sa admin-approval flow (ligtas kung existing DB)
+    for col, typ in [("gcash_ref","TEXT"),("rejected_at","TEXT"),("reject_reason","TEXT"),("admin_days","INTEGER")]:
+        try:
+            cur.execute(f"ALTER TABLE payments ADD COLUMN {col} {typ}")
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
     conn.close()
 
@@ -175,6 +183,33 @@ def get_user_data(user_id):
     user = cur.fetchone()
     conn.close()
     return dict(user) if user else None
+
+def activate_premium(user_id, days):
+    """Activate premium for a user, stacking renewal if still active. Returns expiry string."""
+    conn = get_db()
+    cur = conn.cursor()
+    now = get_ph_time().replace(tzinfo=None)
+    cur.execute("SELECT premium_expiry FROM users WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    start = now
+    if row and row['premium_expiry']:
+        try:
+            old = datetime.datetime.strptime(row['premium_expiry'], "%Y-%m-%d %H:%M:%S")
+            if old > now: start = old
+        except Exception:
+            pass
+    expiry = start + datetime.timedelta(days=days)
+    cur.execute("UPDATE users SET is_premium = 1, premium_start = COALESCE(premium_start, ?), premium_expiry = ? WHERE user_id = ?",
+                (format_date(now), format_date(expiry), user_id))
+    conn.commit()
+    conn.close()
+    return format_date(expiry)
+
+def require_admin():
+    """Return None if admin logged in, else a (json, status) error tuple."""
+    if not session.get('is_admin'):
+        return ({'error': 'Admin login required'}, 403)
+    return None
 
 # ==================== ROUTES ====================
 @app.route('/')
@@ -278,13 +313,14 @@ def set_theme():
     conn.close()
     return jsonify({'success': True})
 
-# ==================== PREMIUM & PAYMENT SYSTEM (AUTO-UNLOCK) ====================
+# ==================== PREMIUM & PAYMENT SYSTEM (ADMIN-APPROVAL) ====================
 @app.route('/api/premium/request', methods=['POST'])
 def request_premium():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     conn = get_db()
     cur = conn.cursor()
+    # Reuse lang kung pending o waiting pa; kung na-reject, gagawa ng bago
     cur.execute("""
         SELECT reference_id FROM payments
         WHERE user_id = ? AND status IN ('pending', 'waiting')
@@ -318,13 +354,15 @@ def request_premium():
 
 @app.route('/api/premium/confirm-payment', methods=['POST'])
 def confirm_payment():
-    """AUTO-UNLOCK: pag-click ng user ng 'I Have Sent Payment', activate agad ang
-    Premium — WALANG admin approval na hihintayin. Ang /api/premium/approve ay
-    natira para sa manual management/revocation ng admin."""
+    """USER submits proof of payment (GCash Transaction Reference Number).
+    Status -> 'waiting' (Pending Approval — Waiting for Admin). HINDI auto-activate."""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     data = request.get_json(silent=True) or {}
     reference_id = str(data.get('reference_id', '')).strip()
+    gcash_ref = str(data.get('gcash_ref', '')).strip()
+    if not gcash_ref:
+        return jsonify({'success': False, 'error': 'Ilagay ang GCash Transaction Reference Number (makikita sa resibo).'})
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM payments WHERE reference_id = ? AND user_id = ?",
@@ -340,36 +378,21 @@ def confirm_payment():
         return jsonify({'success': True, 'activated': True,
                         'message': 'Premium already activated',
                         'expiry_date': row['premium_expiry'] if row else None})
-    # === AUTO-ACTIVATE AGAD (walang hihintayin na admin) ===
-    now = get_ph_time().replace(tzinfo=None)
-    cur.execute("SELECT premium_expiry FROM users WHERE user_id = ?", (payment['user_id'],))
-    row = cur.fetchone()
-    start = now
-    if row and row['premium_expiry']:
-        try:
-            old = datetime.datetime.strptime(row['premium_expiry'], "%Y-%m-%d %H:%M:%S")
-            if old > now:
-                start = old  # renewal: dagdag sa natitirang araw
-        except Exception:
-            pass
-    expiry = start + datetime.timedelta(days=PREMIUM_DAYS)
-    cur.execute(
-        "UPDATE users SET is_premium = 1, premium_start = COALESCE(premium_start, ?), premium_expiry = ? WHERE user_id = ?",
-        (format_date(now), format_date(expiry), payment['user_id']))
-    cur.execute("UPDATE payments SET status = 'activated', activated_at = ? WHERE reference_id = ?",
-                (format_date(now), reference_id))
+    now = format_date(get_ph_time())
+    cur.execute("UPDATE payments SET status = 'waiting', gcash_ref = ?, sent_at = ? WHERE reference_id = ?",
+                (gcash_ref, now, reference_id))
     conn.commit()
     conn.close()
-    return jsonify({'success': True, 'activated': True, 'message': 'Premium Activated!',
-                    'expiry_date': format_date(expiry), 'days_left': PREMIUM_DAYS})
+    return jsonify({'success': True, 'status': 'waiting',
+                    'message': 'Pending Approval — Waiting for Admin'})
 
-# Admin manual management (natira — para sa pag-activate o pag-revoke kung kailangan):
-#   POST /api/premium/approve   header: X-Admin-Key: <ADMIN_KEY>   body: {"reference_id": "TH-..."}
+# Legacy API-key approve (natira para sa automation):
 @app.route('/api/premium/approve', methods=['POST'])
 def approve_payment():
     if not ADMIN_KEY or request.headers.get('X-Admin-Key', '') != ADMIN_KEY:
         return jsonify({'error': 'Forbidden'}), 403
     reference_id = (request.get_json(silent=True) or {}).get('reference_id', '')
+    days = int((request.get_json(silent=True) or {}).get('days', PREMIUM_DAYS))
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM payments WHERE reference_id = ?", (reference_id,))
@@ -377,23 +400,11 @@ def approve_payment():
     if not payment:
         conn.close()
         return jsonify({'success': False, 'error': 'Reference ID not found'}), 404
-    if payment['status'] == 'activated':
-        conn.close()
-        return jsonify({'success': True, 'message': 'Already activated'})
-    now = get_ph_time().replace(tzinfo=None)
-    cur.execute("SELECT premium_expiry FROM users WHERE user_id = ?", (payment['user_id'],))
-    row = cur.fetchone()
-    start = now
-    if row and row['premium_expiry']:
-        old = datetime.datetime.strptime(row['premium_expiry'], "%Y-%m-%d %H:%M:%S")
-        if old > now:
-            start = old
-    expiry = start + datetime.timedelta(days=PREMIUM_DAYS)
-    cur.execute("UPDATE users SET is_premium = 1, premium_start = COALESCE(premium_start, ?), premium_expiry = ? WHERE user_id = ?",
-                (format_date(now), format_date(expiry), payment['user_id']))
-    cur.execute("UPDATE payments SET status = 'activated', activated_at = ? WHERE reference_id = ?",
-                (format_date(now), reference_id))
-    conn.commit()
+    if payment['status'] != 'activated':
+        expiry = activate_premium(payment['user_id'], days)
+        cur.execute("UPDATE payments SET status = 'activated', activated_at = ?, admin_days = ? WHERE reference_id = ?",
+                    (format_date(get_ph_time()), days, reference_id))
+        conn.commit()
     conn.close()
     return jsonify({'success': True, 'message': 'Premium activated'})
 
@@ -421,6 +432,147 @@ def premium_status():
         'latest_payment': dict(payment) if payment else None,
         'price': PREMIUM_PRICE
     })
+
+# ==================== ADMIN ACCOUNT & DASHBOARD ====================
+@app.route('/admin')
+def admin_page():
+    if session.get('is_admin'):
+        return render_template_string(ADMIN_HTML, logged_in=True)
+    return render_template_string(ADMIN_HTML, logged_in=False)
+
+@app.route('/admin/login', methods=['POST'])
+def admin_login():
+    data = request.get_json(silent=True) or {}
+    u = str(data.get('username', '')).strip()
+    p = str(data.get('password', ''))
+    if u == ADMIN_USER and p == ADMIN_PASS:
+        session['is_admin'] = True
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Invalid admin credentials'}), 401
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('is_admin', None)
+    return redirect(url_for('admin_page'))
+
+def _admin_api_guard():
+    if not session.get('is_admin'):
+        return jsonify({'error': 'Admin login required'}), 403
+    return None
+
+@app.route('/api/admin/pending', methods=['GET'])
+def admin_pending():
+    g = _admin_api_guard()
+    if g: return g
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT p.id, p.reference_id, p.gcash_ref, p.amount, p.sent_at, p.status,
+               u.user_id, u.full_name, u.email, u.student_id
+        FROM payments p JOIN users u ON p.user_id = u.user_id
+        WHERE p.status = 'waiting'
+        ORDER BY p.sent_at ASC
+    """)
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return jsonify(rows)
+
+@app.route('/api/admin/active', methods=['GET'])
+def admin_active():
+    g = _admin_api_guard()
+    if g: return g
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id, full_name, email, premium_start, premium_expiry FROM users WHERE is_premium = 1 ORDER BY premium_expiry ASC")
+    rows = []
+    now = get_ph_time().replace(tzinfo=None)
+    for r in cur.fetchall():
+        d = dict(r)
+        try:
+            exp = datetime.datetime.strptime(d['premium_expiry'], "%Y-%m-%d %H:%M:%S")
+            d['days_left'] = (exp - now).days
+        except Exception:
+            d['days_left'] = 0
+        rows.append(d)
+    conn.close()
+    return jsonify(rows)
+
+@app.route('/api/admin/users', methods=['GET'])
+def admin_users():
+    g = _admin_api_guard()
+    if g: return g
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id, full_name, email, student_id, is_premium, premium_expiry FROM users ORDER BY full_name")
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return jsonify(rows)
+
+@app.route('/api/admin/approve', methods=['POST'])
+def admin_approve():
+    g = _admin_api_guard()
+    if g: return g
+    data = request.get_json(silent=True) or {}
+    payment_id = data.get('payment_id')
+    days = int(data.get('days', PREMIUM_DAYS))
+    if days not in (30, 60, 90):
+        days = PREMIUM_DAYS
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM payments WHERE id = ?", (payment_id,))
+    p = cur.fetchone()
+    if not p:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Payment not found'}), 404
+    if p['status'] != 'activated':
+        expiry = activate_premium(p['user_id'], days)
+        cur.execute("UPDATE payments SET status = 'activated', activated_at = ?, admin_days = ? WHERE id = ?",
+                    (format_date(get_ph_time()), days, payment_id))
+        conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Approved — Premium activated'})
+
+@app.route('/api/admin/reject', methods=['POST'])
+def admin_reject():
+    g = _admin_api_guard()
+    if g: return g
+    data = request.get_json(silent=True) or {}
+    payment_id = data.get('payment_id')
+    reason = str(data.get('reason', 'Invalid proof of payment')).strip()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE payments SET status = 'rejected', rejected_at = ?, reject_reason = ? WHERE id = ?",
+                (format_date(get_ph_time()), reason, payment_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Rejected'})
+
+@app.route('/api/admin/grant', methods=['POST'])
+def admin_grant():
+    g = _admin_api_guard()
+    if g: return g
+    data = request.get_json(silent=True) or {}
+    user_id = str(data.get('user_id', '')).strip()
+    days = int(data.get('days', PREMIUM_DAYS))
+    if not user_id:
+        return jsonify({'success': False, 'error': 'user_id required'}), 400
+    expiry = activate_premium(user_id, days)
+    return jsonify({'success': True, 'expiry_date': expiry})
+
+@app.route('/api/admin/revoke', methods=['POST'])
+def admin_revoke():
+    g = _admin_api_guard()
+    if g: return g
+    data = request.get_json(silent=True) or {}
+    user_id = str(data.get('user_id', '')).strip()
+    if not user_id:
+        return jsonify({'success': False, 'error': 'user_id required'}), 400
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET is_premium = 0, premium_start = NULL, premium_expiry = NULL WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'message': 'Premium revoked'})
 
 # ==================== TASKS API ====================
 @app.route('/api/tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
@@ -661,6 +813,172 @@ def planner():
         conn.close()
         return jsonify({'success': True})
 
+
+ADMIN_HTML = r"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskHive — Admin Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Roboto,sans-serif;}
+body{background:#EFF6FF;color:#0F172A;min-height:100vh;padding:20px;}
+.wrap{max-width:900px;margin:0 auto;}
+h1{font-size:24px;margin-bottom:6px;background:linear-gradient(135deg,#6366F1,#3B82F6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sub{color:#64748B;font-size:14px;margin-bottom:20px;}
+.card{background:#fff;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(99,102,241,.08);}
+.card h3{font-size:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.card h3 .badge{font-size:12px;background:#6366F1;color:#fff;padding:3px 10px;border-radius:10px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #E2E8F0;vertical-align:middle;}
+th{color:#64748B;font-weight:600;font-size:12px;text-transform:uppercase;}
+.btn{padding:8px 14px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.btn-ok{background:#10B981;color:#fff;}
+.btn-no{background:#EF4444;color:#fff;}
+.btn-out{background:transparent;border:1px solid #6366F1;color:#6366F1;}
+.btn-warn{background:#F59E0B;color:#fff;}
+select{padding:6px 8px;border:1px solid #E2E8F0;border-radius:6px;font-size:13px;margin-right:6px;}
+input{padding:10px 12px;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;width:100%;margin-bottom:10px;}
+.login-box{max-width:360px;margin:60px auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,.08);}
+.login-box h2{text-align:center;margin-bottom:20px;}
+.err{color:#EF4444;font-size:13px;margin-top:8px;display:none;}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tab{padding:8px 16px;border-radius:20px;border:1px solid #E2E8F0;background:#fff;cursor:pointer;font-size:13px;font-weight:600;}
+.tab.active{background:#6366F1;color:#fff;border-color:#6366F1;}
+.section{display:none;}
+.section.active{display:block;}
+.empty{text-align:center;padding:30px;color:#64748B;font-size:14px;}
+.meta{font-size:11px;color:#64748B;}
+.days{font-weight:700;color:#10B981;}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+{% if not logged_in %}
+<div class="login-box">
+<h2>🔐 Admin Login</h2>
+<input type="text" id="adminUser" placeholder="Admin Username" autocomplete="username">
+<input type="password" id="adminPass" placeholder="Password" autocomplete="current-password">
+<button class="btn btn-ok" style="width:100%;padding:12px;" onclick="doLogin()">Log In as Admin</button>
+<div class="err" id="loginErr"></div>
+<p style="margin-top:14px;font-size:12px;color:#64748B;text-align:center;">
+Default: username <strong>admin</strong> · password <strong>taskhive123</strong><br>
+(Set env vars ADMIN_USER / ADMIN_PASS to change)</p>
+<p style="margin-top:10px;text-align:center;font-size:13px;"><a href="/login" style="color:#6366F1;">← User login</a></p>
+</div>
+{% else %}
+<div class="topbar">
+<div><h1>🐝 TaskHive Admin</h1><div class="sub">Premium Request Management</div></div>
+<a href="/admin/logout" class="btn btn-out">Log Out</a>
+</div>
+<div class="tabs">
+<div class="tab active" onclick="showTab('pending',this)">⏳ Pending Requests <span id="cntPending"></span></div>
+<div class="tab" onclick="showTab('active',this)">👑 Active Premium</div>
+<div class="tab" onclick="showTab('users',this)">👥 All Users</div>
+</div>
+<div class="section active" id="sec-pending">
+<div class="card"><h3>Pending Premium Requests <span class="badge" id="cntPending2">0</span></h3>
+<div id="pendingList"><div class="empty">Loading...</div></div></div>
+</div>
+<div class="section" id="sec-active">
+<div class="card"><h3>Active Premium Users</h3>
+<div id="activeList"><div class="empty">Loading...</div></div></div>
+</div>
+<div class="section" id="sec-users">
+<div class="card"><h3>All Users — Manual Grant / Revoke</h3>
+<div id="usersList"><div class="empty">Loading...</div></div></div>
+</div>
+{% endif %}
+</div>
+<script>
+function doLogin(){
+  const u=document.getElementById('adminUser').value.trim();
+  const p=document.getElementById('adminPass').value;
+  fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+  .then(r=>r.json()).then(d=>{
+    if(d.success){location.reload();}
+    else{const e=document.getElementById('loginErr');e.textContent=d.error||'Invalid';e.style.display='block';}
+  });
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('adminUser'))doLogin();});
+function showTab(name,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+function fmt(d){if(!d)return'--';try{return new Date(d.replace(' ','T')).toLocaleString('en-PH');}catch(e){return d;}}
+function loadPending(){
+  fetch('/api/admin/pending').then(r=>r.json()).then(rows=>{
+    document.getElementById('cntPending').textContent='('+rows.length+')';
+    document.getElementById('cntPending2').textContent=rows.length;
+    const el=document.getElementById('pendingList');
+    if(!rows.length){el.innerHTML='<div class="empty">✅ Walang pending requests. All clear!</div>';return;}
+    el.innerHTML='<table><tr><th>Pangalan</th><th>Email</th><th>GCash Ref #</th><th>Petsa ng Pagbayad</th><th>Halaga</th><th>Aksyon</th></tr>'+
+    rows.map(r=>'<tr><td><strong>'+r.full_name+'</strong><div class="meta">'+(r.student_id||'')+'</div></td>'+
+    '<td>'+r.email+'</td><td><code>'+(r.gcash_ref||'--')+'</code><div class="meta">Ref: '+r.reference_id+'</div></td>'+
+    '<td>'+fmt(r.sent_at)+'</td><td>₱'+r.amount.toFixed(2)+'</td>'+
+    '<td><select id="days'+r.id+'"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select>'+
+    '<button class="btn btn-ok" onclick="approve('+r.id+')">Approve</button> '+
+    '<button class="btn btn-no" onclick="reject('+r.id+')">Reject</button></td></tr>').join('')+'</table>';
+  });
+}
+function approve(id){
+  const days=document.getElementById('days'+id).value;
+  if(!confirm('Approve at i-activate ang Premium ('+days+' days)?'))return;
+  fetch('/api/admin/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payment_id:id,days:parseInt(days)})})
+  .then(r=>r.json()).then(d=>{alert(d.message||'Approved!');loadPending();loadActive();loadUsers();});
+}
+function reject(id){
+  const reason=prompt('Reason for rejection (makikita ng user):','Invalid or unverified GCash reference. Please resubmit correct proof of payment.');
+  if(reason===null)return;
+  fetch('/api/admin/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payment_id:id,reason:reason})})
+  .then(r=>r.json()).then(()=>{alert('Rejected. Maaari nang mag-resubmit ang user.');loadPending();});
+}
+function loadActive(){
+  fetch('/api/admin/active').then(r=>r.json()).then(rows=>{
+    const el=document.getElementById('activeList');
+    if(!rows.length){el.innerHTML='<div class="empty">Walang active premium users.</div>';return;}
+    el.innerHTML='<table><tr><th>Pangalan</th><th>Email</th><th>Nagsimula</th><th>Mag-eexpire</th><th>Natitira</th><th>Aksyon</th></tr>'+
+    rows.map(r=>'<tr><td><strong>'+r.full_name+'</strong></td><td>'+r.email+'</td><td>'+fmt(r.premium_start)+'</td><td>'+fmt(r.premium_expiry)+'</td>'+
+    '<td><span class="days">'+r.days_left+' days</span></td>'+
+    '<td><button class="btn btn-no" onclick="revoke(\''+r.user_id+'\')">Revoke</button></td></tr>').join('')+'</table>';
+  });
+}
+function revoke(uid){
+  if(!confirm('Alisin ang Premium access ng user na ito?'))return;
+  fetch('/api/admin/revoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid})})
+  .then(r=>r.json()).then(()=>{alert('Premium revoked.');loadActive();loadUsers();});
+}
+function loadUsers(){
+  fetch('/api/admin/users').then(r=>r.json()).then(rows=>{
+    const el=document.getElementById('usersList');
+    el.innerHTML='<table><tr><th>Pangalan</th><th>Email</th><th>Student ID</th><th>Status</th><th>Aksyon</th></tr>'+
+    rows.map(r=>{
+      const isP=r.is_premium==1;
+      return '<tr><td><strong>'+r.full_name+'</strong></td><td>'+r.email+'</td><td>'+(r.student_id||'--')+'</td>'+
+      '<td>'+(isP?'<span class="days">👑 Premium</span>':'Free')+'</td>'+
+      '<td>'+(isP
+        ?'<button class="btn btn-no" onclick="revoke(\''+r.user_id+'\')">Revoke</button>'
+        :'<select id="gdays'+r.user_id+'"><option value="30">30d</option><option value="60">60d</option><option value="90">90d</option></select> '+
+          '<button class="btn btn-warn" onclick="grant(\''+r.user_id+'\')">Grant</button>')+'</td></tr>';
+    }).join('')+'</table>';
+  });
+}
+function grant(uid){
+  const days=document.getElementById('gdays'+uid).value;
+  if(!confirm('Bigyan ng Premium ('+days+' days) ang user na ito?'))return;
+  fetch('/api/admin/grant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid,days:parseInt(days)})})
+  .then(r=>r.json()).then(d=>{alert('Premium granted! Expires: '+d.expiry_date);loadActive();loadUsers();});
+}
+if(document.getElementById('sec-pending')){loadPending();loadActive();loadUsers();setInterval(()=>{if(document.getElementById('sec-pending').classList.contains('active'))loadPending();},10000);}
+</script>
+</body>
+</html>
+"""
+
 # ==================== FRONTEND HTML ====================
 FRONTEND_HTML = '''
 <!DOCTYPE html>
@@ -882,7 +1200,7 @@ FRONTEND_HTML += r'''
                 <div class="sidebar-item" onclick="navigateTo('projects')">👥 Projects</div>
                 <div class="sidebar-item" onclick="navigateTo('grades')">📊 Grades</div>
                 <div class="sidebar-item" id="menuBudget" onclick="navigateTo('budget')">💰 Budget Tracker <span class="lock">🔒</span></div>
-                <div class="sidebar-item" onclick="navigateTo('planner')">📈 Study Planner</div>
+                <div class="sidebar-item locked" id="menuPlanner" onclick="navigateTo('planner')">📈 Study Planner <span class="lock">🔒</span></div>
                 <div class="sidebar-item" id="menuPremium" onclick="navigateTo('premium')">✨ Premium Features</div>
                 <div class="sidebar-item" onclick="navigateTo('settings')">⚙️ Settings</div>
                 <div class="sidebar-item" style="color: var(--danger);" onclick="logout()">🚪 Log Out</div>
@@ -939,8 +1257,8 @@ FRONTEND_HTML += r'''
                     <div class="quick-grid">
                         <button class="quick-btn" onclick="showAddTaskModal()"><span>➕</span>Add Task</button>
                         <button class="quick-btn" onclick="navigateTo('schedule')"><span>📆</span>Schedule</button>
-                        <button class="quick-btn" onclick="navigateTo('planner')"><span>🎯</span>Planner</button>
-                        <button class="quick-btn locked" onclick="showPremiumModal()"><span>⏱️</span>Focus</button>
+                        <button class="quick-btn locked" onclick="showPremiumModal()"><span>🎯</span>Planner</button>
+                        <button class="quick-btn" onclick="startFocusMode()"><span>⏱️</span>Focus</button>
                         <button class="quick-btn locked" onclick="showPremiumModal()"><span>🤖</span>AI Help</button>
                         <button class="quick-btn locked" onclick="showPremiumModal()"><span>🔔</span>Remind</button>
                         <button class="quick-btn locked" onclick="showPremiumModal()"><span>♻️</span>Recover</button>
@@ -1071,17 +1389,22 @@ FRONTEND_HTML += r'''
                         <br><button class="btn btn-outline btn-sm" style="margin-top:8px; padding:6px 14px;" onclick="copyGcashNumber()">📋 Copy Number</button>
                     </p>
                     <ol style="font-size: 13px; line-height: 1.7; color: var(--muted); padding-left: 20px; margin-top: 16px;">
-                        <li>Mag-send ng eksaktong <strong>₱50.00</strong></li>
-                        <li>Ilagay ang Reference ID sa message/note ng GCash</li>
-                        <li>I-click ang "I Have Sent Payment" — <strong>mag-a-activate agad ang Premium</strong></li>
+                        <li>Mag-send ng eksaktong <strong>₱50.00</strong> (QR o Express Send)</li>
+                        <li>Kunin ang <strong>Transaction Reference Number</strong> sa GCash resibo</li>
+                        <li>I-paste ito sa ibaba → i-click ang <strong>Submit Proof of Payment</strong></li>
+                        <li>Maghintay ng admin approval — <strong>awtomatikong mag-u-unlock lahat pag na-approve</strong></li>
                     </ol>
                     <div class="form-group" style="margin-top: 16px;">
-                        <label>Your Reference ID</label>
+                        <label>Your Reference ID (ilagay sa GCash note)</label>
                         <input type="text" id="refIdDisplay" readonly style="background: var(--border);">
-                        <small style="color: var(--muted); font-size: 12px;">Awtomatikong ginawa. Ilagay ito sa GCash note.</small>
                     </div>
-                    <button class="btn btn-success" onclick="submitPaymentConfirmation()">✅ I Have Sent Payment</button>
-                    <p id="paymentStatusText" style="text-align: center; margin-top: 12px; font-size: 14px;"></p>
+                    <div class="form-group">
+                        <label>GCash Transaction Reference Number * <small style="color:var(--muted);">(makikita sa resibo pagkatapos magbayad)</small></label>
+                        <input type="text" id="gcashRefInput" placeholder="hal. 123456789012" style="font-weight:600;">
+                    </div>
+                    <button class="btn btn-success" id="submitProofBtn" onclick="submitProofOfPayment()">📤 Submit Proof of Payment</button>
+                    <button class="btn btn-outline hidden" id="resubmitBtn" style="margin-top:10px;" onclick="resubmitPayment()">🔄 Resubmit Proof of Payment</button>
+                    <div id="paymentStatusBox" style="text-align:center;margin-top:14px;font-size:14px;font-weight:600;line-height:1.6;"></div>
                 </div>
                 <div class="card">
                     <h3>✨ Premium Features</h3>
@@ -1442,7 +1765,7 @@ function showPage(pageName) {
 }
 
 function navigateTo(pageName) {
-    if (['budget'].includes(pageName) && !isPremium) {
+    if (['budget','planner'].includes(pageName) && !isPremium) {
         showModal('premiumLockModal');
         return;
     }
@@ -1484,6 +1807,8 @@ function updatePremiumUI() {
         expiryText.textContent = `Valid until: ${currentUser.premium_expiry ? new Date(currentUser.premium_expiry.replace(' ', 'T')).toLocaleDateString('en-PH') : '--'}`;
         budgetMenu.classList.remove('locked');
         budgetMenu.querySelector('.lock').style.display = 'none';
+        const pm = document.getElementById('menuPlanner');
+        if (pm) { pm.classList.remove('locked'); pm.querySelector('.lock').style.display = 'none'; }
         planText.textContent = '👑 Premium';
         subStatus.textContent = 'Active ✅';
         subStatus.style.color = 'var(--success)';
@@ -1492,6 +1817,8 @@ function updatePremiumUI() {
         expiryText.textContent = '';
         budgetMenu.classList.add('locked');
         budgetMenu.querySelector('.lock').style.display = 'inline';
+        const pm2 = document.getElementById('menuPlanner');
+        if (pm2) { pm2.classList.add('locked'); pm2.querySelector('.lock').style.display = 'inline'; }
         planText.textContent = 'Free';
         subStatus.textContent = 'Inactive';
         subStatus.style.color = 'var(--muted)';
@@ -2342,32 +2669,91 @@ function openGcashApp() {
     }
 }
 
-// --- PREMIUM & PAYMENT SYSTEM (AUTO-UNLOCK) ---
-function loadPremiumStatus() {
-    fetch('/api/premium/status')
+// --- PREMIUM & PAYMENT SYSTEM (ADMIN-APPROVAL with polling) ---
+let premiumPollTimer = null;
+
+function startFocusMode() {
+    alert('⏱️ Focus Mode: Stay on task! (Basic focus timer — free feature)');
+}
+
+function startPremiumPolling() {
+    stopPremiumPolling();
+    premiumPollTimer = setInterval(() => { loadPremiumStatus(true); }, 5000);
+}
+function stopPremiumPolling() {
+    if (premiumPollTimer) { clearInterval(premiumPollTimer); premiumPollTimer = null; }
+}
+
+function loadPremiumStatus(silent) {
+    return fetch('/api/premium/status')
         .then(res => res.json())
         .then(data => {
             const wasPremium = isPremium;
             isPremium = data.is_premium;
             if (currentUser) currentUser.premium_expiry = data.expiry_date;
             updatePremiumUI();
-            if (isPremium && !wasPremium) loadBudget();
+            if (isPremium && !wasPremium) {
+                loadBudget();
+                stopPremiumPolling();
+                if (silent) {
+                    // Notification: na-approve na habang naghihintay
+                    showApprovedNotification();
+                }
+            }
+            const box = document.getElementById('paymentStatusBox');
+            const payCard = document.getElementById('payCard');
+            const submitBtn = document.getElementById('submitProofBtn');
+            const resubmitBtn = document.getElementById('resubmitBtn');
+            const lp = data.latest_payment;
+
             if (isPremium) {
+                // === PREMIUM ACTIVE ===
                 document.getElementById('premiumInactive').style.display = 'none';
                 document.getElementById('premiumActive').style.display = 'block';
                 const exp = data.expiry_date ? data.expiry_date.replace(' ', 'T') : null;
                 const expText = exp ? new Date(exp).toLocaleDateString('en-PH', {year:'numeric', month:'long', day:'numeric'}) : '--';
-                document.getElementById('premiumExpiryText').textContent = 'Premium Activated — Valid until ' + expText;
-                document.getElementById('premiumCountdown').innerHTML = 'Your Premium expires in: <strong>' + data.days_left + ' days</strong>';
-                const payCard = document.getElementById('payCard');
+                document.getElementById('premiumExpiryText').textContent = 'Premium Active — All Features Unlocked!';
+                document.getElementById('premiumCountdown').innerHTML = 'Premium Active — <strong>' + data.days_left + ' days</strong> remaining · Valid until ' + expText;
                 if (payCard) payCard.style.display = 'none';
+                if (box) box.innerHTML = '✅ <span style="color:var(--success);">Approved — Welcome to Premium! All features unlocked.</span>';
+                stopPremiumPolling();
+            } else if (lp && lp.status === 'waiting') {
+                // === PENDING APPROVAL ===
+                if (payCard) payCard.style.display = 'block';
+                if (submitBtn) { submitBtn.style.display = 'none'; }
+                if (resubmitBtn) resubmitBtn.classList.add('hidden');
+                if (box) box.innerHTML = '⏳ <span style="color:var(--warning);">Pending Approval — Waiting for Admin</span><br><small style="color:var(--muted);font-weight:400;">Awtomatikong mag-u-unlock lahat pag na-approve. Huwag isara ang page.</small>';
+                startPremiumPolling();
+            } else if (lp && lp.status === 'rejected') {
+                // === REJECTED ===
+                if (payCard) payCard.style.display = 'block';
+                if (submitBtn) submitBtn.style.display = 'none';
+                if (resubmitBtn) resubmitBtn.classList.remove('hidden');
+                if (box) box.innerHTML = '❌ <span style="color:var(--danger);">Rejected — Please resubmit proof of payment</span>' +
+                    (lp.reject_reason ? '<br><small style="color:var(--muted);font-weight:400;">Reason: ' + lp.reject_reason + '</small>' : '');
+                stopPremiumPolling();
             } else {
+                // === NO PAYMENT YET / FREE ===
                 document.getElementById('premiumInactive').style.display = 'block';
                 document.getElementById('premiumActive').style.display = 'none';
-                const payCard = document.getElementById('payCard');
                 if (payCard) payCard.style.display = 'block';
+                if (submitBtn) submitBtn.style.display = 'block';
+                if (resubmitBtn) resubmitBtn.classList.add('hidden');
+                if (box) box.innerHTML = '';
+                stopPremiumPolling();
             }
         });
+}
+
+function showApprovedNotification() {
+    const box = document.getElementById('paymentStatusBox');
+    if (box) box.innerHTML = '🎉 <span style="color:var(--success);">Approved — Welcome to Premium! All features unlocked!</span>';
+    // Simple in-page banner notification
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:12px 20px;border-radius:10px;z-index:9999;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);';
+    banner.textContent = '🎉 Approved — Welcome to Premium! All features unlocked!';
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 5000);
 }
 
 function generateReference() {
@@ -2379,55 +2765,58 @@ function generateReference() {
             document.getElementById('refIdDisplay').value = referenceId;
             document.getElementById('gcNumber').textContent = data.gcash_number;
             document.getElementById('gcName').textContent = data.gcash_name;
-            const st = document.getElementById('paymentStatusText');
-            st.textContent = `Send ₱${data.amount} via GCash. Ref: ${data.reference_id}`;
-            st.style.color = 'var(--success)';
+            loadPremiumStatus();
         });
 }
 
-function submitPaymentConfirmation() {
+function submitProofOfPayment() {
     const refVal = document.getElementById('refIdDisplay').value.trim();
-    if (!refVal) { alert('Please wait for your Reference ID to load, then try again.'); return; }
+    const gcashRef = document.getElementById('gcashRefInput').value.trim();
+    const box = document.getElementById('paymentStatusBox');
+    if (!refVal) { alert('Please wait for your Reference ID to load.'); return; }
+    if (!gcashRef) {
+        box.innerHTML = '❌ <span style="color:var(--danger);">Ilagay ang GCash Transaction Reference Number (makikita sa resibo).</span>';
+        document.getElementById('gcashRefInput').focus();
+        return;
+    }
+    const btn = document.getElementById('submitProofBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Submitting...'; }
     fetch('/api/premium/confirm-payment', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({reference_id: refVal})
+        body: JSON.stringify({reference_id: refVal, gcash_ref: gcashRef})
     })
     .then(res => res.json())
     .then(data => {
-        const st = document.getElementById('paymentStatusText');
         if (data.success && data.activated) {
-            // === INSTANT AUTO-UNLOCK ===
             isPremium = true;
             if (currentUser) currentUser.premium_expiry = data.expiry_date;
-            updatePremiumUI();
-            loadBudget(); // unlock Budget Tracker agad
-            const exp = data.expiry_date ? data.expiry_date.replace(' ', 'T') : null;
-            const expText = exp ? new Date(exp).toLocaleDateString('en-PH', {year:'numeric', month:'long', day:'numeric'}) : '--';
-            document.getElementById('premiumInactive').style.display = 'none';
-            document.getElementById('premiumActive').style.display = 'block';
-            document.getElementById('premiumExpiryText').textContent = 'Premium Activated — Valid until ' + expText;
-            document.getElementById('premiumCountdown').innerHTML = 'Your Premium expires in: <strong>' + (data.days_left || 30) + ' days</strong>';
-            const payCard = document.getElementById('payCard');
-            if (payCard) payCard.style.display = 'none';
-            st.textContent = '✅ Premium Activated! All features unlocked.';
-            st.style.color = 'var(--success)';
-            loadPremiumStatus(); // i-verify mula sa server
+            updatePremiumUI(); loadBudget(); loadPremiumStatus();
         } else if (data.success) {
-            st.textContent = '✅ ' + (data.message || 'Payment submitted!');
-            st.style.color = 'var(--success)';
+            // Pending — mag-poll na agad
             loadPremiumStatus();
         } else {
-            st.textContent = '❌ ' + (data.error || 'Something went wrong.');
-            st.style.color = 'var(--danger)';
+            box.innerHTML = '❌ <span style="color:var(--danger);">' + (data.error || 'Something went wrong.') + '</span>';
+            if (btn) { btn.disabled = false; btn.textContent = '📤 Submit Proof of Payment'; }
         }
     })
     .catch(() => {
-        const st = document.getElementById('paymentStatusText');
-        st.textContent = '❌ Network error. Please try again.';
-        st.style.color = 'var(--danger)';
+        box.innerHTML = '❌ <span style="color:var(--danger);">Network error. Please try again.</span>';
+        if (btn) { btn.disabled = false; btn.textContent = '📤 Submit Proof of Payment'; }
     });
 }
+
+function resubmitPayment() {
+    // Reset: gumawa ng bagong reference, linisin ang gcash ref input
+    referenceId = null;
+    document.getElementById('gcashRefInput').value = '';
+    const btn = document.getElementById('submitProofBtn');
+    if (btn) { btn.disabled = false; btn.style.display = 'block'; btn.textContent = '📤 Submit Proof of Payment'; }
+    document.getElementById('resubmitBtn').classList.add('hidden');
+    document.getElementById('paymentStatusBox').innerHTML = '';
+    generateReference();
+}
+
 </script>
 </body>
 </html>
