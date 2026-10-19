@@ -1,8 +1,8 @@
-
+# TaskHive — Optimized for Render / Python 3.14
 Flask==3.1.3
-Werkzeug==2.3.7
-psycopg2-binary==2.9.9
+Werkzeug==3.1.6
+psycopg2-binary==2.9.12
 qrcode==7.4.2
-Pillow==10.1.0
-python-dotenv==1.0.0
-gunicorn==26.2.1
+Pillow==12.3.0
+python-dotenv==1.0.1
+gunicorn==23.0.0
