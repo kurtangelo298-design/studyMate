@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+TaskHive — Plan • Study • Achieve
+All-in-one student productivity app with Friends, Chat, Group Chat,
+and Premium (Admin Approval) system.
+Run:  python3 taskhive.py   then open http://localhost:5000
+Admin login:  admin@taskhive.com / admin123
+"""
 import os
 import json
 import uuid
