@@ -1,33 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-TaskHive.py — Plan * Study * Achieve
-All-in-one student productivity app (single-file Flask + PostgreSQL).
-
-FEATURES
-  * Register / Login (with Remember Me) / Profile / Dark-Light theme / Logout
-  * Dashboard: greeting, daily quote, today's schedule, deadlines, quick stats
-  * Tasks: add/edit/delete, due date+time, priority, complete, overdue alerts, swipe actions
-  * Schedule: classes (day, time, room, subject)
-  * Notes: folders (General / Reviewer / Lecture / Personal)
-  * Projects: group projects, members, deadlines, progress
-  * Grades: subjects, scores, units, auto GPA
-  * Study Planner: goals + progress
-  * Friends: search by name/Student ID, send/accept/decline requests, online status
-  * 1-on-1 real-time chat (polling)
-  * Group chat: create group, add friends, group messaging, typing indicator
-  * Premium (P50 / 30 days): GCash payment form (reference # + receipt screenshot),
-    admin approval, activation/expiry/days-remaining, premium features:
-    Budget Tracker, Deadline Reminders, Missed Task Recovery, Export (CSV/HTML print->PDF),
-    Time Estimator, AI Study Assistant (rule-based), Exam Countdown, Focus Mode,
-    unlimited friends & group chat.
-
-SETUP
-  pip install flask psycopg2-binary qrcode[pil]
-  createdb taskhive   (or set DATABASE_URL below)
-  python TaskHive.py  -> http://localhost:5000
-  Admin account (auto-created): admin@taskhive.com / Admin@12345
-  Set your real GCash number in GCASH_NUMBER below.
-"""
 
 import os
 import io
