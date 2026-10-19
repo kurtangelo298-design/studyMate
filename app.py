@@ -322,10 +322,13 @@ def request_premium():
 
 @app.route('/api/premium/confirm-payment', methods=['POST'])
 def confirm_payment():
+    """AUTO-UNLOCK: pag-click ng 'I Have Sent Payment', activate agad —
+    walang admin approval. Ang /api/premium/approve ay natira para sa
+    manual management ng admin."""
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    data = request.get_json()
-    reference_id = data.get('reference_id', '')
+    data = request.get_json(silent=True) or {}
+    reference_id = str(data.get('reference_id', '')).strip()
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM payments WHERE reference_id = ? AND user_id = ?",
@@ -335,15 +338,34 @@ def confirm_payment():
         conn.close()
         return jsonify({'success': False, 'error': 'Reference ID not found'})
     if payment['status'] == 'activated':
+        cur.execute("SELECT premium_expiry FROM users WHERE user_id = ?", (session['user_id'],))
+        row = cur.fetchone()
         conn.close()
-        return jsonify({'success': True, 'message': 'Already activated'})
-    cur.execute("UPDATE payments SET status = 'waiting' WHERE reference_id = ?", (reference_id,))
+        return jsonify({'success': True, 'activated': True,
+                        'message': 'Premium already activated',
+                        'expiry_date': row['premium_expiry'] if row else None})
+    # === AUTO-ACTIVATE AGAD ===
+    now = get_ph_time().replace(tzinfo=None)
+    cur.execute("SELECT premium_expiry FROM users WHERE user_id = ?", (payment['user_id'],))
+    row = cur.fetchone()
+    start = now
+    if row and row['premium_expiry']:
+        try:
+            old = datetime.datetime.strptime(row['premium_expiry'], "%Y-%m-%d %H:%M:%S")
+            if old > now:
+                start = old  # renewal: dagdag sa natitirang araw
+        except Exception:
+            pass
+    expiry = start + datetime.timedelta(days=PREMIUM_DAYS)
+    cur.execute(
+        "UPDATE users SET is_premium = 1, premium_start = COALESCE(premium_start, ?), premium_expiry = ? WHERE user_id = ?",
+        (format_date(now), format_date(expiry), payment['user_id']))
+    cur.execute("UPDATE payments SET status = 'activated', activated_at = ? WHERE reference_id = ?",
+                (format_date(now), reference_id))
     conn.commit()
     conn.close()
-    return jsonify({
-        'success': True,
-        'message': 'Payment submitted! Please wait for admin confirmation (usually within 24 hours).'
-    })
+    return jsonify({'success': True, 'activated': True, 'message': 'Premium Activated!',
+                    'expiry_date': format_date(expiry), 'days_left': PREMIUM_DAYS})
 
 # Tawagin ito ng admin (o ng payment webhook) kapag nakumpirma na ang bayad:
 #   POST /api/premium/approve   header: X-Admin-Key: <ADMIN_KEY>   body: {"reference_id": "TH-..."}
@@ -2385,10 +2407,7 @@ function generateReference() {
 
 function submitPaymentConfirmation() {
     const refVal = document.getElementById('refIdDisplay').value.trim();
-    if (!refVal) {
-        alert('Please wait for your Reference ID to load, then try again.');
-        return;
-    }
+    if (!refVal) { alert('Please wait for your Reference ID to load, then try again.'); return; }
     fetch('/api/premium/confirm-payment', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -2396,13 +2415,41 @@ function submitPaymentConfirmation() {
     })
     .then(res => res.json())
     .then(data => {
-        if (data.success) {
-            document.getElementById('paymentStatusText').textContent = '✅ Payment submitted! Waiting for Admin approval...';
-            document.getElementById('paymentStatusText').style.color = 'var(--success)';
+        const st = document.getElementById('paymentStatusText');
+        if (data.success && data.activated) {
+            // === INSTANT UNLOCK ===
+            isPremium = true;
+            if (currentUser) currentUser.premium_expiry = data.expiry_date;
+            updatePremiumUI();
+            loadBudget(); // unlock Budget Tracker agad
+            // Ipakita ang "Premium Activated — Valid until [date]"
+            document.getElementById('premiumInactive').style.display = 'none';
+            document.getElementById('premiumActive').style.display = 'block';
+            const exp = data.expiry_date ? data.expiry_date.replace(' ', 'T') : null;
+            const expText = exp ? new Date(exp).toLocaleDateString('en-PH',
+                {year:'numeric', month:'long', day:'numeric'}) : '--';
+            document.getElementById('premiumExpiryText').textContent =
+                'Premium Activated — Valid until ' + expText;
+            document.getElementById('premiumCountdown').innerHTML =
+                'Your Premium expires in: <strong>' + (data.days_left || 30) + ' days</strong>';
+            const payCard = document.getElementById('payCard');
+            if (payCard) payCard.style.display = 'none'; // itago ang payment form
+            st.textContent = '✅ Premium Activated! All features unlocked.';
+            st.style.color = 'var(--success)';
+            loadPremiumStatus(); // i-verify mula sa server
+        } else if (data.success) {
+            st.textContent = '✅ ' + (data.message || 'Payment submitted!');
+            st.style.color = 'var(--success)';
+            loadPremiumStatus();
         } else {
-            document.getElementById('paymentStatusText').textContent = '❌ ' + data.error;
-            document.getElementById('paymentStatusText').style.color = 'var(--danger)';
+            st.textContent = '❌ ' + (data.error || 'Something went wrong.');
+            st.style.color = 'var(--danger)';
         }
+    })
+    .catch(() => {
+        const st = document.getElementById('paymentStatusText');
+        st.textContent = '❌ Network error. Please try again.';
+        st.style.color = 'var(--danger)';
     });
 }
 </script>
